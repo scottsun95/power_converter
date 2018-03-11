@@ -17,8 +17,8 @@ const int sec_switch_disable = 21;
 
 const int neg_vcc_en = 33;
 
-const int button1 = 30;
-const int button2 = 31;
+const uint8_t button1 = 30;
+const uint8_t button2 = 31;
 
 const int load_sense_disable = 17;
 const int load_sense = 16;
@@ -42,10 +42,22 @@ const float adc_res = pow(2, adc_res_bits) - 1;
 void initialize();
 float inputVoltage();
 float loadVoltage();
+
+void button1Pressed();
+void button2Pressed();
+
 void p_curr_peak();
 void s_curr_zero();
+void p_curr_zero();
+void s_curr_peak();
+
+
+extern volatile uint8_t button1_flag;
+extern volatile uint8_t button2_flag;
 
 extern volatile uint8_t s_zero;
 extern volatile uint8_t p_peak;
+extern volatile uint8_t s_peak;
+extern volatile uint8_t p_zero;
 
 #endif

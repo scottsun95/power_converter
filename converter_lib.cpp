@@ -1,12 +1,17 @@
 #include "converter_lib.h"
 
-Bounce pushbutton1 = Bounce(button1, 10);  // 10 ms debounce
-Bounce pushbutton2 = Bounce(button2, 10);  // 10 ms debounce
+//Bounce pushbutton1 = Bounce(button1, 10);  // 10 ms debounce
+//Bounce pushbutton2 = Bounce(button2, 10);  // 10 ms debounce
 
 ADC *adc = new ADC();
 
+volatile uint8_t button1_flag = 0;
+volatile uint8_t button2_flag = 0;
+
 volatile uint8_t s_zero = 0;
 volatile uint8_t p_peak = 0;
+volatile uint8_t s_peak = 0;
+volatile uint8_t p_zero = 0;
 
 /*
 	Initializes circuit board with all supply rails enabled 
@@ -56,7 +61,9 @@ void initialize() {
     
     // configure pushbuttons
     pinMode(button1, INPUT_PULLUP);
+    attachInterrupt(button1, button1Pressed, FALLING);
     pinMode(button2, INPUT_PULLUP);
+    attachInterrupt(button2, button2Pressed, FALLING);
 
     // configure LED
     pinMode(red, OUTPUT);
@@ -124,6 +131,14 @@ float loadVoltage() {
 	return voltage;
 }
 
+void button1Pressed() {
+    button1_flag = 1;
+}
+
+void button2Pressed() {
+    button1_flag = 1;
+}
+
 void p_curr_peak() {
     p_peak = 1;
     s_zero = 0;
@@ -131,4 +146,12 @@ void p_curr_peak() {
 
 void s_curr_zero() {
     s_zero = 1;
+}
+
+void p_curr_zero() {
+    p_zero = 1;
+}
+
+void s_curr_peak() {
+    s_peak = 1;
 }

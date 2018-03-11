@@ -87,7 +87,7 @@ void timed_boost(int on, int off) {
 }
 
 
-//float* curr_boost() {
+//void comparator_boost() {
 //}
 
 
