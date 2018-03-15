@@ -4,9 +4,14 @@
 //Bounce pushbutton2 = Bounce(button2, 10);  // 10 ms debounce
 
 ADC *adc = new ADC();
+DMAChannel dma;
+
+//DMAMEM static volatile int16_t __attribute__((aligned(1+0))) buffer [1] = {0};
+//RingBufferDMA *dmaBuffer = new RingBufferDMA(buffer, 1, ADC_1); // use dma with ADC1
+
 
 float input_voltage = 0;
-float load_voltage = 0;
+volatile uint16_t load_adc[1];
 
 volatile uint8_t button1_flag = 0;
 volatile uint8_t button2_flag = 0;
@@ -43,9 +48,11 @@ void initialize() {
     pinMode(neg_vcc_en, OUTPUT);
     digitalWriteFast(neg_vcc_en, HIGH);
 
-    // configure ADC
+    // configure ADC & DMA
     pinMode(input_sense, INPUT);
     pinMode(load_sense, INPUT);
+
+    dmaInit();
 
     adc->setReference(ADC_REFERENCE::REF_EXT, ADC_0);
     adc->setReference(ADC_REFERENCE::REF_EXT, ADC_1);
@@ -57,6 +64,8 @@ void initialize() {
     adc->setAveraging(4, ADC_1);
     adc->setResolution(adc_res_bits, ADC_0);
     adc->setResolution(adc_res_bits, ADC_1);
+
+    adc->enableDMA(ADC_1);
     adc->startContinuous(load_sense, ADC_1);
 
     // Turn on load voltage sense
@@ -115,6 +124,10 @@ void initialize() {
 
     pinMode(3, OUTPUT); // trigger for load voltage sense
 
+    for (int i = 0; i < 10; i++) {
+        Serial.println(load_adc[0]);
+        delay(1);
+    }
 }
 
 /****************************
@@ -140,9 +153,8 @@ void intervalReadInputVoltage() {
 
 //	Obtains load voltage reading
 float loadVoltage() {
-	// obtain ADC value and convert to voltage
-	float voltage = adc->analogReadContinuous(ADC_1) / adc_res * aref_voltage * 284;
-	return voltage;
+	// convert ADC to voltage
+    return load_adc[0] / adc_res * aref_voltage * 284.5;
 }
 
 /************************
@@ -202,6 +214,20 @@ void p_curr_zero() {
 void s_curr_peak() {
     s_peak = 1;
 }
+
+void dmaInit() {
+  dma.source(*(uint16_t*) &ADC1_RA);
+  dma.destinationBuffer(load_adc, sizeof(load_adc));
+  dma.attachInterrupt(dma_isr);
+  dma.interruptAtCompletion();
+  dma.triggerAtHardwareEvent(DMAMUX_SOURCE_ADC1);
+  dma.enable();
+}
+
+void dma_isr() {
+    dma.clearInterrupt();
+}
+
 
 /*******************
     Math Functions

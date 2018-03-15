@@ -1,5 +1,7 @@
 #include <i2c_t3.h>
 #include <ADC.h>
+#include <RingBufferDMA.h>
+#include <DMAChannel.h>
 #include <Time.h>
 #include <TimeAlarms.h>
 //#include <Bounce.h>
@@ -24,7 +26,7 @@ const uint8_t button2 = 31;
 
 const uint8_t load_sense_disable = 17;
 const uint8_t load_sense = 16;
-extern float load_voltage;
+extern volatile uint16_t load_adc[1];
 
 const uint8_t input_sense_disable = 15;
 const uint8_t input_sense = 14;
@@ -49,6 +51,9 @@ void initialize();
 float inputVoltage();
 void intervalReadInputVoltage();
 float loadVoltage();
+
+void dmaInit();
+void dma_isr(); 
 
 void timedBoost(unsigned int on, unsigned int off);
 void timedBuck(unsigned int on, unsigned int off);
