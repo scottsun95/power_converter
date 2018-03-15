@@ -1,6 +1,8 @@
 #include <i2c_t3.h>
 #include <ADC.h>
-#include <Bounce.h>
+#include <Time.h>
+#include <TimeAlarms.h>
+//#include <Bounce.h>
 
 #ifndef converter_lib_h
 #define converter_lib_h
@@ -9,39 +11,49 @@
 #define S_DAC 0b0010000
 #define ALL_DAC 0b1110011
 
-const int pri_switch = 22;
-const int pri_switch_disable = 23;
+const uint8_t pri_switch = 22;
+const uint8_t pri_switch_disable = 23;
 
-const int sec_switch = 20;
-const int sec_switch_disable = 21;
+const uint8_t sec_switch = 20;
+const uint8_t sec_switch_disable = 21;
 
-const int neg_vcc_en = 33;
+const uint8_t neg_vcc_en = 33;
 
 const uint8_t button1 = 30;
 const uint8_t button2 = 31;
 
-const int load_sense_disable = 17;
-const int load_sense = 16;
+const uint8_t load_sense_disable = 17;
+const uint8_t load_sense = 16;
+extern float load_voltage;
 
-const int input_sense_disable = 15;
-const int input_sense = 14;
+const uint8_t input_sense_disable = 15;
+const uint8_t input_sense = 14;
+extern float input_voltage;
 
-const int P1 = 38;
-const int P2 = 37;
-const int S1 = 36;
-const int S2 = 35;
+const uint8_t P1 = 38;
+const uint8_t P2 = 37;
+const uint8_t S1 = 36;
+const uint8_t S2 = 35;
 
-const int green = 24;
-const int red = 25;
-const int blue = 26;
+const uint8_t green = 24;
+const uint8_t red = 25;
+const uint8_t blue = 26;
 
+extern ADC *adc;
 const float aref_voltage = 3.1624;
-const int adc_res_bits = 12;
+const uint8_t adc_res_bits = 12;
 const float adc_res = pow(2, adc_res_bits) - 1;
 
 void initialize();
+
 float inputVoltage();
+void intervalReadInputVoltage();
 float loadVoltage();
+
+void timedBoost(unsigned int on, unsigned int off);
+void timedBuck(unsigned int on, unsigned int off);
+void comparatorBoost();
+void comparatorBuck();
 
 void button1Pressed();
 void button2Pressed();

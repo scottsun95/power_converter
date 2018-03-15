@@ -5,6 +5,9 @@
 
 ADC *adc = new ADC();
 
+float input_voltage = 0;
+float load_voltage = 0;
+
 volatile uint8_t button1_flag = 0;
 volatile uint8_t button2_flag = 0;
 
@@ -22,6 +25,8 @@ void initialize() {
     pinMode(13, OUTPUT);
     digitalWriteFast(13, HIGH);
 
+    Serial.begin(9600);
+
     // Disable secondary-side gate drivers
     pinMode(sec_switch, OUTPUT);
     digitalWriteFast(sec_switch, LOW);
@@ -38,28 +43,32 @@ void initialize() {
     pinMode(neg_vcc_en, OUTPUT);
     digitalWriteFast(neg_vcc_en, HIGH);
 
-    // Turn on load voltage sense
-    pinMode(load_sense_disable, OUTPUT); // set to INPUT to turn off
-    digitalWriteFast(load_sense_disable, LOW);
-
-    // Turn off input voltage sense
-    pinMode(input_sense_disable, OUTPUT);
-    digitalWriteFast(input_sense_disable, HIGH);
-
     // configure ADC
     pinMode(input_sense, INPUT);
     pinMode(load_sense, INPUT);
 
     adc->setReference(ADC_REFERENCE::REF_EXT, ADC_0);
     adc->setReference(ADC_REFERENCE::REF_EXT, ADC_1);
-    adc->setSamplingSpeed(ADC_SAMPLING_SPEED::VERY_HIGH_SPEED);
-    adc->setConversionSpeed(ADC_CONVERSION_SPEED::HIGH_SPEED_16BITS);
-    adc->setAveraging(8);
+    adc->setSamplingSpeed(ADC_SAMPLING_SPEED::LOW_SPEED, ADC_0);
+    adc->setConversionSpeed(ADC_CONVERSION_SPEED::LOW_SPEED, ADC_0);
+    adc->setSamplingSpeed(ADC_SAMPLING_SPEED::VERY_HIGH_SPEED, ADC_1);
+    adc->setConversionSpeed(ADC_CONVERSION_SPEED::VERY_HIGH_SPEED, ADC_1);
+    adc->setAveraging(16, ADC_0);
+    adc->setAveraging(4, ADC_1);
     adc->setResolution(adc_res_bits, ADC_0);
     adc->setResolution(adc_res_bits, ADC_1);
     adc->startContinuous(load_sense, ADC_1);
+
+    // Turn on load voltage sense
+    pinMode(load_sense_disable, OUTPUT); // set to INPUT to turn off
+    digitalWriteFast(load_sense_disable, LOW);
+
+    // Set up input voltage sense
+    pinMode(input_sense_disable, OUTPUT);
+    input_voltage = inputVoltage();
+    Alarm.timerRepeat(60, intervalReadInputVoltage);
     
-    // configure pushbuttons
+    // configure pushbuttons and attach interrupts
     pinMode(button1, INPUT_PULLUP);
     attachInterrupt(button1, button1Pressed, FALLING);
     pinMode(button2, INPUT_PULLUP);
@@ -87,8 +96,8 @@ void initialize() {
 
     // Transmit to Slave
     Wire.beginTransmission(P_DAC);  // Slave address
-    Wire.write(0b00101111);       // Set both of DAC1 voltages to the same
-    Wire.write(0b00111110); 
+    Wire.write(0b00101111);         // Set both of DAC1 voltages to the same
+    Wire.write(0b01010000);         // 0b00111110, 0b10000000 for 0.7V, which is actually 0.9A
     Wire.write(0b10000000); 
     Wire.endTransmission();         // Transmit to Slave
 
@@ -100,45 +109,83 @@ void initialize() {
     
     Wire.beginTransmission(S_DAC);  // Slave address
     Wire.write(0b00100000);       // Write to I2C
-    Wire.write(0b01111111); 
+    Wire.write(0b01111100); 
     Wire.write(0); 
     Wire.endTransmission();
 
+    pinMode(3, OUTPUT); // trigger for load voltage sense
+
 }
 
+/****************************
+    Voltage Sense Functions
+****************************/
 
-/*
-	Obtains input voltage reading. 
-	TODO: May want to convert to IntervalTimer non-blocking
-*/
+//	Obtains input voltage reading. 
 float inputVoltage() {
-	digitalWriteFast(input_sense_disable, LOW);
+	digitalWrite(input_sense_disable, LOW);
 
 	// obtain ADC value and convert to voltage
-	float voltage = adc->analogRead(A0, ADC_0) / adc_res * aref_voltage * 2;
+	float voltage = adc->analogRead(A0, ADC_0) / adc_res * aref_voltage * 2.016;
 
-	digitalWriteFast(input_sense_disable, HIGH);
+	digitalWrite(input_sense_disable, HIGH);
 	return voltage;
 }
 
+void intervalReadInputVoltage() {
+    input_voltage = inputVoltage();
+    Serial.print("Input Voltage: ");
+    Serial.println(input_voltage);
+}
 
-/*
-	Obtains load voltage reading
-*/
+//	Obtains load voltage reading
 float loadVoltage() {
 	// obtain ADC value and convert to voltage
-	float voltage = adc->analogReadContinuous(ADC_1) / adc_res * aref_voltage * 400;
+	float voltage = adc->analogReadContinuous(ADC_1) / adc_res * aref_voltage * 284;
 	return voltage;
 }
 
+/************************
+    Switching Functions
+*************************/
+
+// timing-based switching 
+void timedBoost(unsigned int on, unsigned int off) { // 5ms/4ms -> 5ms/2ms works ok
+    digitalWriteFast(pri_switch, HIGH);
+    delayMicroseconds(on);
+    digitalWriteFast(pri_switch, LOW);
+    delayMicroseconds(off);
+}
+
+void timedBuck(unsigned int on, unsigned int off) {
+    digitalWriteFast(sec_switch, HIGH);
+    delayMicroseconds(on);
+    digitalWriteFast(sec_switch, LOW);
+    delayMicroseconds(off);
+}
+
+void comparatorBoost() {
+
+}
+
+void comparatorBuck() {
+
+}
+
+/************************
+    Interrupt Functions
+*************************/
+
+// button press interrupts
 void button1Pressed() {
     button1_flag = 1;
 }
 
 void button2Pressed() {
-    button1_flag = 1;
+    button2_flag = 1;
 }
 
+// comparator threshold interrupts
 void p_curr_peak() {
     p_peak = 1;
     s_zero = 0;
@@ -155,3 +202,17 @@ void p_curr_zero() {
 void s_curr_peak() {
     s_peak = 1;
 }
+
+/*******************
+    Math Functions
+********************/
+// takes average of buffer
+float average(float* buffer, int window) {
+    float sum = 0.;
+    for (int i = 0; i < window; i++) {
+        sum += buffer[i];
+    }
+    return sum / window;
+}
+
+
