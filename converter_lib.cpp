@@ -18,8 +18,8 @@ volatile uint8_t s_zero = 0;
 volatile uint8_t p_peak = 0;
 volatile uint8_t s_peak = 0;
 volatile uint8_t p_zero = 0;
-volatile uint8_t pri_switch_on = 0;
-volatile uint8_t sec_switch_on = 0;
+volatile int8_t pri_switch_on = DISABLE;
+volatile int8_t sec_switch_on = DISABLE;
 
 /*
 	Initializes circuit board with all supply rails enabled 
@@ -97,7 +97,7 @@ void initialize() {
     pinMode(P2, INPUT);
     pinMode(S1, INPUT);
     pinMode(S2, INPUT);
-    attachInterrupt(S2, s_curr_zero, RISING);
+    attachInterrupt(S1, s_curr_zero, RISING);
 
     // Configure I2C bus for DACs
     Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_EXT, 400000);
@@ -153,7 +153,7 @@ void intervalReadInputVoltage() {
 
 // Converts ADC DMA reading to voltage
 float loadVoltage() {
-    return load_adc[0] / adc_res * aref_voltage * 284.5;
+    return load_adc[0] / adc_res * aref_voltage * 284.8;
 }
 
 /************************
@@ -199,26 +199,38 @@ void button2Pressed() {
 
 // comparator threshold interrupts
 void p_curr_peak() {
-    if (pri_switch_on) {
+    if (pri_switch_on == ON) {
         p_peak = 1;
+    }
+    else {
+        p_peak = 0;
     }
 }
 
 void s_curr_zero() {
-    if (!pri_switch_on) {
+    if (pri_switch_on == OFF) {
         s_zero = 1;
+    }
+    else {
+        s_zero = 0;
     }
 }
 
 void p_curr_zero() {
-    if (!sec_switch_on) {
+    if (sec_switch_on == OFF) {
         p_zero = 1;
+    }
+    else {
+        p_zero = 0;
     }
 }
 
 void s_curr_peak() {
-    if (sec_switch_on) {
+    if (sec_switch_on == ON) {
         s_peak = 1;
+    }
+    else {
+        s_peak = 0;
     }
 }
 

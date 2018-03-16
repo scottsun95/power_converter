@@ -14,33 +14,35 @@ void setup() {
     digitalWriteFast(sec_switch_disable, LOW);
 
     digitalWriteFast(pri_switch, HIGH);
-    pri_switch_on = 1;
+    pri_switch_on = ON;
 
     comparator_timer = 0;
-    while (comparator_timer < 100) {
+    while (comparator_timer < 200) {
         if (loadVoltage() < 200) {
             if (s_zero == 1) {
                 digitalWriteFast(pri_switch, HIGH);
-                pri_switch_on = 1;
+                pri_switch_on = ON;
                 s_zero = 0;
+                p_peak = 0;
             }
             else if (p_peak == 1) {
                 digitalWriteFast(pri_switch, LOW);
-                pri_switch_on = 0;
+                pri_switch_on = OFF;
+                s_zero = 0;
                 p_peak = 0;
             }
         }
         else {
             digitalWriteFast(pri_switch, LOW);
-            pri_switch_on = 0;
-            s_zero = 0;
+            pri_switch_on = OFF;
             p_peak = 0;
+            s_zero = 0;
         }
     }
     digitalWriteFast(pri_switch, LOW); 
-    pri_switch_on = 0;
-    s_zero = 0;
+    pri_switch_on = DISABLE;
     p_peak = 0;
+    s_zero = 0;
 }
 
 void loop() {
