@@ -1,14 +1,9 @@
 #include "converter_lib.h"
 
 //Bounce pushbutton1 = Bounce(button1, 10);  // 10 ms debounce
-//Bounce pushbutton2 = Bounce(button2, 10);  // 10 ms debounce
 
 ADC *adc = new ADC();
 DMAChannel dma;
-
-//DMAMEM static volatile int16_t __attribute__((aligned(1+0))) buffer [1] = {0};
-//RingBufferDMA *dmaBuffer = new RingBufferDMA(buffer, 1, ADC_1); // use dma with ADC1
-
 
 float input_voltage = 0;
 volatile uint16_t load_adc[1];
@@ -20,6 +15,8 @@ volatile uint8_t s_zero = 0;
 volatile uint8_t p_peak = 0;
 volatile uint8_t s_peak = 0;
 volatile uint8_t p_zero = 0;
+volatile uint8_t pri_switch_on = 0;
+volatile uint8_t sec_switch_on = 0;
 
 /*
 	Initializes circuit board with all supply rails enabled 
@@ -103,15 +100,20 @@ void initialize() {
     Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_EXT, 400000);
     Wire.setDefaultTimeout(200000);
 
-    // Transmit to Slave
     Wire.beginTransmission(P_DAC);  // Slave address
-    Wire.write(0b00101111);         // Set both of DAC1 voltages to the same
+    Wire.write(0b00100001);         // Set output B of DAC1 
     Wire.write(0b01010000);         // 0b00111110, 0b10000000 for 0.7V, which is actually 0.9A
     Wire.write(0b10000000); 
     Wire.endTransmission();         // Transmit to Slave
 
+    Wire.beginTransmission(P_DAC);  // Slave address
+    Wire.write(0b00100000);         // Set output A of DAC1 
+    Wire.write(0b00000001);         
+    Wire.write(0b00000000);         
+    Wire.endTransmission();         
+
     Wire.beginTransmission(S_DAC);  // Slave address
-    Wire.write(0b00100001);       // Write to I2C
+    Wire.write(0b00100001);         // Write to I2C
     Wire.write(0b01110000); 
     Wire.write(0); 
     Wire.endTransmission();
@@ -123,11 +125,6 @@ void initialize() {
     Wire.endTransmission();
 
     pinMode(3, OUTPUT); // trigger for load voltage sense
-
-    for (int i = 0; i < 10; i++) {
-        Serial.println(load_adc[0]);
-        delay(1);
-    }
 }
 
 /****************************
@@ -151,9 +148,8 @@ void intervalReadInputVoltage() {
     Serial.println(input_voltage);
 }
 
-//	Obtains load voltage reading
+// Converts ADC DMA reading to voltage
 float loadVoltage() {
-	// convert ADC to voltage
     return load_adc[0] / adc_res * aref_voltage * 284.5;
 }
 
@@ -176,6 +172,7 @@ void timedBuck(unsigned int on, unsigned int off) {
     delayMicroseconds(off);
 }
 
+// comparator based switching
 void comparatorBoost() {
 
 }
@@ -215,6 +212,7 @@ void s_curr_peak() {
     s_peak = 1;
 }
 
+// Configures DMA for ADC readings
 void dmaInit() {
   dma.source(*(uint16_t*) &ADC1_RA);
   dma.destinationBuffer(load_adc, sizeof(load_adc));
@@ -226,19 +224,9 @@ void dmaInit() {
 
 void dma_isr() {
     dma.clearInterrupt();
+    digitalWriteFast(3, HIGH); // for checking sample freq.
+    digitalWriteFast(3, LOW);
 }
 
-
-/*******************
-    Math Functions
-********************/
-// takes average of buffer
-float average(float* buffer, int window) {
-    float sum = 0.;
-    for (int i = 0; i < window; i++) {
-        sum += buffer[i];
-    }
-    return sum / window;
-}
 
 

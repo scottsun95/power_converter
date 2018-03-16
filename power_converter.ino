@@ -1,10 +1,6 @@
 #include "converter_lib.h"
 
-#define DEBUG_MODE 1
-
-elapsedMicros load_sense_timer;
-
-int counter = 0;
+elapsedMicros comparator_timer;
 
 void setup() {
     initialize();    
@@ -23,8 +19,8 @@ void setup() {
 
     // engage primary switch
     for (int i=0; i < 17; i++) {
-        load_sense_timer = 0;
-        while (load_sense_timer < 100) {
+        comparator_timer = 0;
+        while (comparator_timer < 100) {
             if (loadVoltage() < 150) {
                 if (s_zero == 1) {
                     digitalWriteFast(pri_switch, HIGH);
@@ -43,7 +39,7 @@ void setup() {
         }
     }
     digitalWriteFast(pri_switch, LOW); 
-    for (int i = 0;i < 20;i++) {
+    for (int i = 0; i < 20; i++) {
         timedBuck(0,5);
     }
 }
@@ -51,10 +47,11 @@ void setup() {
 void loop() {
     // updates alarm timer
     Alarm.delay(0);
-    //Serial.println(samples[0]);
+
+    // run function if button pressed
     if (button1_flag || button2_flag) {
         digitalWriteFast(blue, LOW);
-        for (int i = 0; i < 50; i++) {
+        for (int i = 0; i < 5; i++) {
             timedSquare(10, 10, 200);
         }
         digitalWriteFast(blue, HIGH);

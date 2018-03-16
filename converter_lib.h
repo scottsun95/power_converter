@@ -77,4 +77,7 @@ extern volatile uint8_t p_peak;
 extern volatile uint8_t s_peak;
 extern volatile uint8_t p_zero;
 
+extern volatile uint8_t pri_switch_on;
+extern volatile uint8_t sec_switch_on;
+
 #endif
