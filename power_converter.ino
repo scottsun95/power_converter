@@ -63,11 +63,14 @@ void loop() {
 // generates square wave using timing control method
 void timedSquare(unsigned long on_time_milli, unsigned long off_time_milli, float voltage) {
     elapsedMillis pulse_timer;
+    float load_voltage = loadVoltage();
 
     // boost up and hold at voltage
     pulse_timer = 0;
     while (pulse_timer < on_time_milli) {
-        float load_voltage = loadVoltage();
+        if (adc->isComplete(ADC_1)) {
+            load_voltage = loadVoltage();
+        }
         if (load_voltage < voltage) {
             if (load_voltage > 0.99 * voltage) {
                 timedBoost(2,1);
@@ -81,8 +84,11 @@ void timedSquare(unsigned long on_time_milli, unsigned long off_time_milli, floa
     // buck down and stay at 0
     pulse_timer = 0;
     while (pulse_timer < off_time_milli) {
-        if (loadVoltage() > 5) {
-            timedBuck(1,5); // 0, 5 for 500V
+        if (adc->isComplete(ADC_1)) {
+            load_voltage = loadVoltage();
+        }
+        if (loadVoltage() > 8) {
+            timedBuck(0,5); // 0, 5 for 500V
         }
     }
 }

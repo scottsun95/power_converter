@@ -95,9 +95,12 @@ void initialize() {
     pinMode(P1, INPUT);
     attachInterrupt(P1, p_curr_peak, RISING);
     pinMode(P2, INPUT);
+    //attachInterrupt(P2, p_curr_zero, RISING);
     pinMode(S1, INPUT);
-    pinMode(S2, INPUT);
     attachInterrupt(S1, s_curr_zero, RISING);
+    pinMode(S2, INPUT);
+    //attachInterrupt(S2, s_curr_peak, RISING);
+    
 
     // Configure I2C bus for DACs
     Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_EXT, 400000);
@@ -111,8 +114,8 @@ void initialize() {
 
     Wire.beginTransmission(P_DAC);  
     Wire.write(0b00100000);         // Set output A of DAC1 
-    Wire.write(0b00000001);         
-    Wire.write(0b00000000);         
+    Wire.write(0b00000011);         
+    Wire.write(0b11000000);         
     Wire.endTransmission();         
 
     Wire.beginTransmission(S_DAC);  
@@ -122,9 +125,9 @@ void initialize() {
     Wire.endTransmission();
     
     Wire.beginTransmission(S_DAC);  
-    Wire.write(0b00100000);       // Set output A of DAC2
-    Wire.write(0b01111100); 
-    Wire.write(0); 
+    Wire.write(0b00100000);       // Set output A of DAC2 to 0.6V below B
+    Wire.write(0b00101000); 
+    Wire.write(0b11110000); 
     Wire.endTransmission();
 
     pinMode(3, OUTPUT); // trigger for load voltage sense
@@ -162,17 +165,27 @@ float loadVoltage() {
 
 // timing-based switching 
 void timedBoost(unsigned int on, unsigned int off) { // 5ms/4ms -> 5ms/2ms works ok
+    elapsedMicros timer;
+
     digitalWriteFast(pri_switch, HIGH);
-    delayMicroseconds(on);
+    timer = 0;
+    while(timer < on);
+
     digitalWriteFast(pri_switch, LOW);
-    delayMicroseconds(off);
+    timer = 0;
+    while(timer < off);
 }
 
 void timedBuck(unsigned int on, unsigned int off) {
+    elapsedMicros timer;
+
     digitalWriteFast(sec_switch, HIGH);
-    delayMicroseconds(on);
+    timer = 0;
+    while(timer < on);
+
     digitalWriteFast(sec_switch, LOW);
-    delayMicroseconds(off);
+    timer = 0;
+    while(timer < off);
 }
 
 // comparator based switching
@@ -216,21 +229,21 @@ void s_curr_zero() {
     }
 }
 
-void p_curr_zero() {
-    if (sec_switch_on == OFF) {
-        p_zero = 1;
-    }
-    else {
-        p_zero = 0;
-    }
-}
-
 void s_curr_peak() {
     if (sec_switch_on == ON) {
         s_peak = 1;
     }
     else {
         s_peak = 0;
+    }
+}
+
+void p_curr_zero() {
+    if (sec_switch_on == OFF) {
+        p_zero = 1;
+    }
+    else {
+        p_zero = 0;
     }
 }
 
