@@ -13,35 +13,34 @@ void setup() {
     digitalWriteFast(pri_switch_disable, LOW);
     digitalWriteFast(sec_switch_disable, LOW);
 
-    s_zero = 0;
-    p_peak = 0;
     digitalWriteFast(pri_switch, HIGH);
+    pri_switch_on = 1;
 
-    // engage primary switch
-    for (int i=0; i < 17; i++) {
-        comparator_timer = 0;
-        while (comparator_timer < 100) {
-            if (loadVoltage() < 150) {
-                if (s_zero == 1) {
-                    digitalWriteFast(pri_switch, HIGH);
-                    s_zero = 0;
-                }
-                else if (p_peak == 1) {
-                    digitalWriteFast(pri_switch, LOW);
-                    p_peak = 0;
-                }
-            }
-            else {
-                digitalWriteFast(pri_switch, LOW);
+    comparator_timer = 0;
+    while (comparator_timer < 100) {
+        if (loadVoltage() < 200) {
+            if (s_zero == 1) {
+                digitalWriteFast(pri_switch, HIGH);
+                pri_switch_on = 1;
                 s_zero = 0;
+            }
+            else if (p_peak == 1) {
+                digitalWriteFast(pri_switch, LOW);
+                pri_switch_on = 0;
                 p_peak = 0;
             }
         }
+        else {
+            digitalWriteFast(pri_switch, LOW);
+            pri_switch_on = 0;
+            s_zero = 0;
+            p_peak = 0;
+        }
     }
     digitalWriteFast(pri_switch, LOW); 
-    for (int i = 0; i < 20; i++) {
-        timedBuck(0,5);
-    }
+    pri_switch_on = 0;
+    s_zero = 0;
+    p_peak = 0;
 }
 
 void loop() {
@@ -49,14 +48,13 @@ void loop() {
     Alarm.delay(0);
 
     // run function if button pressed
-    if (button1_flag || button2_flag) {
+    if (button1_flag) {
         digitalWriteFast(blue, LOW);
         for (int i = 0; i < 5; i++) {
             timedSquare(10, 10, 200);
         }
         digitalWriteFast(blue, HIGH);
         button1_flag = 0;
-        button2_flag = 0;
     }
 }
 

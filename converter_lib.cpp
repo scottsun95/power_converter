@@ -2,15 +2,18 @@
 
 //Bounce pushbutton1 = Bounce(button1, 10);  // 10 ms debounce
 
+// voltage sensing
 ADC *adc = new ADC();
 DMAChannel dma;
 
 float input_voltage = 0;
 volatile uint16_t load_adc[1];
 
+// button flags
 volatile uint8_t button1_flag = 0;
 volatile uint8_t button2_flag = 0;
 
+// comparator flags
 volatile uint8_t s_zero = 0;
 volatile uint8_t p_peak = 0;
 volatile uint8_t s_peak = 0;
@@ -106,20 +109,20 @@ void initialize() {
     Wire.write(0b10000000); 
     Wire.endTransmission();         // Transmit to Slave
 
-    Wire.beginTransmission(P_DAC);  // Slave address
+    Wire.beginTransmission(P_DAC);  
     Wire.write(0b00100000);         // Set output A of DAC1 
     Wire.write(0b00000001);         
     Wire.write(0b00000000);         
     Wire.endTransmission();         
 
-    Wire.beginTransmission(S_DAC);  // Slave address
-    Wire.write(0b00100001);         // Write to I2C
+    Wire.beginTransmission(S_DAC);  
+    Wire.write(0b00100001);         // Set output B of DAC2
     Wire.write(0b01110000); 
     Wire.write(0); 
     Wire.endTransmission();
     
-    Wire.beginTransmission(S_DAC);  // Slave address
-    Wire.write(0b00100000);       // Write to I2C
+    Wire.beginTransmission(S_DAC);  
+    Wire.write(0b00100000);       // Set output A of DAC2
     Wire.write(0b01111100); 
     Wire.write(0); 
     Wire.endTransmission();
@@ -196,20 +199,27 @@ void button2Pressed() {
 
 // comparator threshold interrupts
 void p_curr_peak() {
-    p_peak = 1;
-    s_zero = 0;
+    if (pri_switch_on) {
+        p_peak = 1;
+    }
 }
 
 void s_curr_zero() {
-    s_zero = 1;
+    if (!pri_switch_on) {
+        s_zero = 1;
+    }
 }
 
 void p_curr_zero() {
-    p_zero = 1;
+    if (!sec_switch_on) {
+        p_zero = 1;
+    }
 }
 
 void s_curr_peak() {
-    s_peak = 1;
+    if (sec_switch_on) {
+        s_peak = 1;
+    }
 }
 
 // Configures DMA for ADC readings
