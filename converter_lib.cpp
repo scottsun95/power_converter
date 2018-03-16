@@ -93,11 +93,11 @@ void initialize() {
 
     // configure interrupt pins
     pinMode(P1, INPUT);
-    attachInterrupt(P1, p_curr_peak, RISING);
+    //attachInterrupt(P1, p_curr_peak, RISING);
     pinMode(P2, INPUT);
     //attachInterrupt(P2, p_curr_zero, RISING);
     pinMode(S1, INPUT);
-    attachInterrupt(S1, s_curr_zero, RISING);
+    //attachInterrupt(S1, s_curr_zero, RISING);
     pinMode(S2, INPUT);
     //attachInterrupt(S2, s_curr_peak, RISING);
     
@@ -156,7 +156,7 @@ void intervalReadInputVoltage() {
 
 // Converts ADC DMA reading to voltage
 float loadVoltage() {
-    return load_adc[0] / adc_res * aref_voltage * 284.8;
+    return load_adc[0] / adc_res * aref_voltage * 284.5;
 }
 
 /************************
@@ -165,15 +165,16 @@ float loadVoltage() {
 
 // timing-based switching 
 void timedBoost(unsigned int on, unsigned int off) { // 5ms/4ms -> 5ms/2ms works ok
-    elapsedMicros timer;
+    //elapsedMicros timer;
 
     digitalWriteFast(pri_switch, HIGH);
-    timer = 0;
-    while(timer < on);
-
+    //timer = 0;
+    //while(timer < on);
+    delayMicroseconds(on);
     digitalWriteFast(pri_switch, LOW);
-    timer = 0;
-    while(timer < off);
+    //timer = 0;
+    //while(timer < off);
+    delayMicroseconds(off);
 }
 
 void timedBuck(unsigned int on, unsigned int off) {
