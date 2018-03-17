@@ -2,9 +2,7 @@
 
 #define DEBUG_MODE 1
 
-elapsedMicros load_sense_timer;
-
-int counter = 0;
+elapsedMicros comparator_timer;
 
 void setup() {
     initialize();    
