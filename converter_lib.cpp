@@ -93,13 +93,13 @@ void initialize() {
 
     // configure interrupt pins
     pinMode(P1, INPUT);
-    //attachInterrupt(P1, p_curr_peak, RISING);
+    attachInterrupt(P1, p_curr_peak, RISING);
     pinMode(P2, INPUT);
-    //attachInterrupt(P2, p_curr_zero, RISING);
+    attachInterrupt(P2, p_curr_zero, RISING);
     pinMode(S1, INPUT);
-    //attachInterrupt(S1, s_curr_zero, RISING);
+    attachInterrupt(S1, s_curr_zero, RISING);
     pinMode(S2, INPUT);
-    //attachInterrupt(S2, s_curr_peak, RISING);
+    attachInterrupt(S2, s_curr_peak, RISING);
     
 
     // Configure I2C bus for DACs
@@ -126,8 +126,8 @@ void initialize() {
     
     Wire.beginTransmission(S_DAC);  
     Wire.write(0b00100000);       // Set output A of DAC2 to 0.6V below B
-    Wire.write(0b00101000); 
-    Wire.write(0b11110000); 
+    Wire.write(0b00100000); 
+    Wire.write(0b00000000); 
     Wire.endTransmission();
 
     pinMode(3, OUTPUT); // trigger for load voltage sense
@@ -156,7 +156,7 @@ void intervalReadInputVoltage() {
 
 // Converts ADC DMA reading to voltage
 float loadVoltage() {
-    return load_adc[0] / adc_res * aref_voltage * 284.5;
+    return load_adc[0] / adc_res * aref_voltage * 285;
 }
 
 /************************
@@ -165,16 +165,14 @@ float loadVoltage() {
 
 // timing-based switching 
 void timedBoost(unsigned int on, unsigned int off) { // 5ms/4ms -> 5ms/2ms works ok
-    //elapsedMicros timer;
+    elapsedMicros timer;
 
     digitalWriteFast(pri_switch, HIGH);
-    //timer = 0;
-    //while(timer < on);
-    delayMicroseconds(on);
+    timer = 0;
+    while(timer < on);
     digitalWriteFast(pri_switch, LOW);
-    //timer = 0;
-    //while(timer < off);
-    delayMicroseconds(off);
+    timer = 0;
+    while(timer < off);
 }
 
 void timedBuck(unsigned int on, unsigned int off) {
@@ -260,8 +258,8 @@ void dmaInit() {
 
 void dma_isr() {
     dma.clearInterrupt();
-    digitalWriteFast(3, HIGH); // for checking sample freq.
-    digitalWriteFast(3, LOW);
+    //digitalWriteFast(3, HIGH); // for checking sample freq.
+    //digitalWriteFast(3, LOW);
 }
 
 

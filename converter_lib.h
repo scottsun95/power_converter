@@ -17,6 +17,12 @@
 #define OFF 0
 #define DISABLE -1
 
+// Speed up ADC
+#ifdef F_BUS
+#undef F_BUS
+#endif
+#define F_BUS 48000000
+
 const uint8_t pri_switch = 22;
 const uint8_t pri_switch_disable = 23;
 
