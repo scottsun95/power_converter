@@ -36,7 +36,7 @@ const uint8_t button2 = 31;
 
 const uint8_t load_sense_disable = 17;
 const uint8_t load_sense = 16;
-extern volatile uint16_t load_adc[1];
+extern volatile uint16_t load_adc[2];
 
 const uint8_t input_sense_disable = 15;
 const uint8_t input_sense = 14;
@@ -63,7 +63,8 @@ void intervalReadInputVoltage();
 float loadVoltage();
 
 void dmaInit();
-void dma_isr(); 
+void dma_isr();
+void dma2_isr();  
 
 void timedBoost(unsigned int on, unsigned int off);
 void timedBuck(unsigned int on, unsigned int off);
@@ -87,7 +88,7 @@ extern volatile uint8_t p_peak;
 extern volatile uint8_t s_peak;
 extern volatile uint8_t p_zero;
 
-extern volatile int8_t pri_switch_on;
-extern volatile int8_t sec_switch_on;
+extern int8_t pri_switch_on;
+extern int8_t sec_switch_on;
 
 #endif

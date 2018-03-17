@@ -44,7 +44,7 @@ void setup() {
     s_zero = 0;
     
     // buck
-    digitalWriteFast(sec_switch, HIGH);
+    /*digitalWriteFast(sec_switch, HIGH);
     sec_switch_on = ON;
 
     comparator_timer = 0;
@@ -52,13 +52,13 @@ void setup() {
         //while(!adc->isComplete(ADC_1));
         if (loadVoltage() > 8) {
             if (s_peak == 1) {
-                digitalWriteFast(sec_switch, LOW);
+                digitalWriteFast(sec_switch, LOW); // consider writing in isr only for switch-off
                 sec_switch_on = OFF;
                 p_zero = 0;
                 s_peak = 0;
             }
             else if (p_zero == 1) {
-                digitalWriteFast(sec_switch, HIGH);
+                digitalWriteFast(sec_switch, HIGH); // switch-on still raises a ready flag
                 sec_switch_on = ON;
                 p_zero = 0;
                 s_peak = 0;
@@ -73,17 +73,22 @@ void setup() {
     sec_switch_on = DISABLE;
     s_peak = 0;
     p_zero = 0;
-    
+    */
 }
 
 void loop() {
+    Serial.print("ADC1: ");
+    Serial.println(load_adc[0]);
+    Serial.print("ADC0: ");
+    Serial.println(load_adc[1]);
+
     // updates alarm timer
     Alarm.delay(0);
 
     // run function if button pressed
     if (button1_flag) {
         digitalWriteFast(blue, LOW);
-        for (int i = 0; i < 1; i++) {
+        for (int i = 0; i < 2; i++) {
             timedSquare(10, 10, 200);
         }
         digitalWriteFast(blue, HIGH);
@@ -94,40 +99,33 @@ void loop() {
 // generates square wave using timing control method
 void timedSquare(unsigned long on_time_milli, unsigned long off_time_milli, float voltage) {
     elapsedMillis pulse_timer;
-    float buff[100];
-    int counter= 0;
-    float load_voltage;
+    float load_voltage = 0;
 
     // boost up and hold at voltage
     pulse_timer = 0;
     while (pulse_timer < on_time_milli) {
-        while(!adc->isComplete(ADC_1));
-        load_voltage = loadVoltage();
-        if (counter < 100) {
-            buff[counter] = load_voltage;
-            counter++;
+        if (adc->isComplete(ADC_1)) {
+            load_voltage = loadVoltage();
         }
         if (load_voltage < voltage) { // TODO: apply hysteresis to this threshold
-            if (load_voltage > 0.99 * voltage) {
+            if (load_voltage > 0.95 * voltage) {
                 timedBoost(2,1);
             }
             else {
                 timedBoost(5,2);
             }
         }
-        //Serial.println(load_voltage);
     }
 
     // buck down and stay at 0
     pulse_timer = 0;
     while (pulse_timer < off_time_milli) {
-        while(!adc->isComplete(ADC_1));
-        if (loadVoltage() > 8) {
+        if (adc->isComplete(ADC_1)) {
+            load_voltage = loadVoltage();
+        }
+        if (load_voltage > 10) {
             timedBuck(0,5); // 0, 5 for 500V
         }
-    }
-    for (int i = 0; i < counter; i++) {
-        Serial.println(buff[i]);
     }
 }
 

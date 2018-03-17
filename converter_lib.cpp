@@ -5,9 +5,10 @@
 // voltage sensing
 ADC *adc = new ADC();
 DMAChannel dma;
+DMAChannel dma2;
 
 float input_voltage = 0;
-volatile uint16_t load_adc[1];
+volatile uint16_t load_adc[2];
 
 // button flags
 volatile uint8_t button1_flag = 0;
@@ -18,8 +19,8 @@ volatile uint8_t s_zero = 0;
 volatile uint8_t p_peak = 0;
 volatile uint8_t s_peak = 0;
 volatile uint8_t p_zero = 0;
-volatile int8_t pri_switch_on = DISABLE;
-volatile int8_t sec_switch_on = DISABLE;
+int8_t pri_switch_on = DISABLE;
+int8_t sec_switch_on = DISABLE;
 
 /*
 	Initializes circuit board with all supply rails enabled 
@@ -56,17 +57,19 @@ void initialize() {
 
     adc->setReference(ADC_REFERENCE::REF_EXT, ADC_0);
     adc->setReference(ADC_REFERENCE::REF_EXT, ADC_1);
-    adc->setSamplingSpeed(ADC_SAMPLING_SPEED::LOW_SPEED, ADC_0);
-    adc->setConversionSpeed(ADC_CONVERSION_SPEED::LOW_SPEED, ADC_0);
-    adc->setSamplingSpeed(ADC_SAMPLING_SPEED::VERY_HIGH_SPEED, ADC_1);
-    adc->setConversionSpeed(ADC_CONVERSION_SPEED::VERY_HIGH_SPEED, ADC_1);
-    adc->setAveraging(16, ADC_0);
+    adc->setSamplingSpeed(ADC_SAMPLING_SPEED::VERY_HIGH_SPEED, ADC_0);
+    adc->setConversionSpeed(ADC_CONVERSION_SPEED::HIGH_SPEED, ADC_0);
+    adc->setSamplingSpeed(ADC_SAMPLING_SPEED::HIGH_SPEED, ADC_1);
+    adc->setConversionSpeed(ADC_CONVERSION_SPEED::HIGH_SPEED, ADC_1);
+    adc->setAveraging(0, ADC_0);
     adc->setAveraging(4, ADC_1);
     adc->setResolution(adc_res_bits, ADC_0);
     adc->setResolution(adc_res_bits, ADC_1);
 
+    adc->enableDMA(ADC_0);
     adc->enableDMA(ADC_1);
-    adc->startContinuous(load_sense, ADC_1);
+    adc->startSynchronizedContinuous(load_sense, load_sense);
+    //adc->startContinuous(load_sense, ADC_0);
 
     // Turn on load voltage sense
     pinMode(load_sense_disable, OUTPUT); // set to INPUT to turn off
@@ -75,7 +78,7 @@ void initialize() {
     // Set up input voltage sense
     pinMode(input_sense_disable, OUTPUT);
     input_voltage = inputVoltage();
-    Alarm.timerRepeat(60, intervalReadInputVoltage);
+    //Alarm.timerRepeat(60, intervalReadInputVoltage);
     
     // configure pushbuttons and attach interrupts
     pinMode(button1, INPUT_PULLUP);
@@ -130,7 +133,9 @@ void initialize() {
     Wire.write(0b00000000); 
     Wire.endTransmission();
 
-    pinMode(3, OUTPUT); // trigger for load voltage sense
+    // trigger for load voltage sense
+    pinMode(3, OUTPUT); 
+    pinMode(4, OUTPUT);
 }
 
 /****************************
@@ -145,18 +150,19 @@ float inputVoltage() {
 	float voltage = adc->analogRead(A0, ADC_0) / adc_res * aref_voltage * 2.016;
 
 	digitalWrite(input_sense_disable, HIGH);
+
+    Serial.print("Input Voltage: ");
+    Serial.println(input_voltage);
 	return voltage;
 }
 
 void intervalReadInputVoltage() {
     input_voltage = inputVoltage();
-    Serial.print("Input Voltage: ");
-    Serial.println(input_voltage);
 }
 
 // Converts ADC DMA reading to voltage
 float loadVoltage() {
-    return load_adc[0] / adc_res * aref_voltage * 285;
+    return (load_adc[0] + load_adc[1])/ 2.0 / adc_res * aref_voltage * 185;
 }
 
 /************************
@@ -248,18 +254,31 @@ void p_curr_zero() {
 
 // Configures DMA for ADC readings
 void dmaInit() {
-  dma.source(*(uint16_t*) &ADC1_RA);
-  dma.destinationBuffer(load_adc, sizeof(load_adc));
-  dma.attachInterrupt(dma_isr);
-  dma.interruptAtCompletion();
-  dma.triggerAtHardwareEvent(DMAMUX_SOURCE_ADC1);
-  dma.enable();
+    dma.source(*(uint16_t*) &ADC1_RA);
+    dma.destinationBuffer(load_adc, sizeof(load_adc[0]));
+    dma.attachInterrupt(dma_isr);
+    dma.interruptAtCompletion();
+    dma.triggerAtHardwareEvent(DMAMUX_SOURCE_ADC1);
+    dma.enable();
+
+    dma2.source(*(uint16_t*) &ADC0_RA);
+    dma2.destinationBuffer(load_adc + 1, sizeof(load_adc[1]));
+    dma2.attachInterrupt(dma2_isr);
+    dma2.interruptAtCompletion();
+    dma2.triggerAtHardwareEvent(DMAMUX_SOURCE_ADC0);
+    dma2.enable();
 }
 
 void dma_isr() {
     dma.clearInterrupt();
     //digitalWriteFast(3, HIGH); // for checking sample freq.
     //digitalWriteFast(3, LOW);
+}
+
+void dma2_isr() {
+    dma2.clearInterrupt();
+    //digitalWriteFast(4, HIGH); // for checking sample freq.
+    //digitalWriteFast(4, LOW);
 }
 
 
