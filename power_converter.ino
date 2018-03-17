@@ -22,7 +22,7 @@ void setup() {
     digitalWriteFast(pri_switch, HIGH);
 
     // engage primary switch
-    for (int i=0; i < 17; i++) {
+    for (int i=0; i < 1; i++) {
         load_sense_timer = 0;
         while (load_sense_timer < 100) {
             if (load_voltage < 500) {
@@ -59,7 +59,7 @@ void loop() {
 
     if (button1_flag || button2_flag) {
         digitalWriteFast(blue, LOW);
-        timedSquare(100, 10, 400);
+        timedSquare(50, 50, 200);
         digitalWriteFast(blue, HIGH);
         button1_flag = 0;
         button2_flag = 0;
@@ -88,7 +88,7 @@ void timedSquare(unsigned long on_time_milli, unsigned long off_time_milli, floa
     }
     //for (int i = 0; i < 120; i++) { // 100 for 5nF, 320 for 20nF
     pulse_timer = 0;
-    while (pulse_timer < off_time_milli || load_voltage > 10) {
+    while (pulse_timer < off_time_milli) {
         if (adc->isComplete(ADC_1)) {
             load_voltage = loadVoltage();
         }

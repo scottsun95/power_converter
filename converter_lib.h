@@ -11,6 +11,10 @@
 #define S_DAC 0b0010000
 #define ALL_DAC 0b1110011
 
+#define ON 1
+#define OFF 0
+#define DISABLE -1
+
 const uint8_t pri_switch = 22;
 const uint8_t pri_switch_disable = 23;
 
@@ -71,5 +75,8 @@ extern volatile uint8_t s_zero;
 extern volatile uint8_t p_peak;
 extern volatile uint8_t s_peak;
 extern volatile uint8_t p_zero;
+
+extern int8_t pri_switch_on;
+extern int8_t sec_switch_on;
 
 #endif
