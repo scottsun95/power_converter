@@ -49,17 +49,24 @@ void initialize() {
     pinMode(input_sense, INPUT);
     pinMode(load_sense, INPUT);
 
+    //dmaInit();
+
     adc->setReference(ADC_REFERENCE::REF_EXT, ADC_0);
     adc->setReference(ADC_REFERENCE::REF_EXT, ADC_1);
-    adc->setSamplingSpeed(ADC_SAMPLING_SPEED::LOW_SPEED, ADC_0);
-    adc->setConversionSpeed(ADC_CONVERSION_SPEED::LOW_SPEED, ADC_0);
+    adc->setSamplingSpeed(ADC_SAMPLING_SPEED::HIGH_SPEED, ADC_0);
+    adc->setConversionSpeed(ADC_CONVERSION_SPEED::HIGH_SPEED, ADC_0);
     adc->setSamplingSpeed(ADC_SAMPLING_SPEED::VERY_HIGH_SPEED, ADC_1);
     adc->setConversionSpeed(ADC_CONVERSION_SPEED::VERY_HIGH_SPEED, ADC_1);
-    adc->setAveraging(16, ADC_0);
+    adc->setAveraging(0, ADC_0);
     adc->setAveraging(4, ADC_1);
     adc->setResolution(adc_res_bits, ADC_0);
     adc->setResolution(adc_res_bits, ADC_1);
+
+    //adc->enableDMA(ADC_0);
+    //adc->enableDMA(ADC_1);
+    //adc->startSynchronizedContinuous(load_sense, load_sense);
     adc->startContinuous(load_sense, ADC_1);
+    adc->startContinuous(load_sense, ADC_0);
 
     // Turn on load voltage sense
     pinMode(load_sense_disable, OUTPUT); // set to INPUT to turn off
@@ -144,9 +151,9 @@ void intervalReadInputVoltage() {
 
 //	Obtains load voltage reading
 float loadVoltage() {
-	// obtain ADC value and convert to voltage
-	float voltage = adc->analogReadContinuous(ADC_1) / adc_res * aref_voltage * 194;
-	return voltage;
+    //return (load_adc[0] + load_adc[1])/ 2.0 / adc_res * aref_voltage * 185;
+    load_voltage = (adc->analogReadContinuous(ADC_1) +  adc->analogReadContinuous(ADC_1))/2 / adc_res * aref_voltage * 193;
+    return load_voltage;
 }
 
 /************************
@@ -157,6 +164,7 @@ float loadVoltage() {
 void timedBoost(unsigned int on, unsigned int off) { // 5ms/4ms -> 5ms/2ms works ok
     digitalWriteFast(pri_switch, HIGH);
     delayMicroseconds(on);
+
     digitalWriteFast(pri_switch, LOW);
     delayMicroseconds(off);
 }
@@ -164,6 +172,7 @@ void timedBoost(unsigned int on, unsigned int off) { // 5ms/4ms -> 5ms/2ms works
 void timedBuck(unsigned int on, unsigned int off) {
     digitalWriteFast(sec_switch, HIGH);
     delayMicroseconds(on);
+
     digitalWriteFast(sec_switch, LOW);
     delayMicroseconds(off);
 }
@@ -238,4 +247,35 @@ float average(float* buffer, int window) {
     return sum / window;
 }
 
+/*
+// Configures DMA for ADC readings
+void dmaInit() {
+    dma.source(*(uint16_t*) &ADC1_RA);
+    dma.destinationBuffer(load_adc, sizeof(load_adc[0]));
+    dma.attachInterrupt(dma_isr);
+    dma.interruptAtCompletion();
+    dma.triggerAtHardwareEvent(DMAMUX_SOURCE_ADC1);
+    dma.enable();
+
+    dma2.source(*(uint16_t*) &ADC0_RA);
+    dma2.destinationBuffer(load_adc + 1, sizeof(load_adc[1]));
+    dma2.attachInterrupt(dma2_isr);
+    dma2.interruptAtCompletion();
+    dma2.triggerAtHardwareEvent(DMAMUX_SOURCE_ADC0);
+    dma2.enable();
+}
+
+void dma_isr() {
+    dma.clearInterrupt();
+    //digitalWriteFast(3, HIGH); // for checking sample freq.
+    //digitalWriteFast(3, LOW);
+}
+
+void dma2_isr() {
+    dma2.clearInterrupt();
+    //digitalWriteFast(4, HIGH); // for checking sample freq.
+    //digitalWriteFast(4, LOW);
+}
+
+*/
 

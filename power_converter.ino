@@ -20,37 +20,65 @@ void setup() {
     s_zero = 0;
     p_peak = 0;
     digitalWriteFast(pri_switch, HIGH);
+    pri_switch_on = ON;
 
-    // engage primary switch
-    for (int i=0; i < 1; i++) {
-        load_sense_timer = 0;
-        while (load_sense_timer < 100) {
-            if (load_voltage < 500) {
-                if (s_zero == 1) {
-                    digitalWriteFast(pri_switch, HIGH);
-                    s_zero = 0;
-                }
-                else if (p_peak == 1) {
-                    digitalWriteFast(pri_switch, LOW);
-                    p_peak = 0;
-                }
-                if (adc->isComplete(ADC_1)) {
-                    digitalWrite(3, HIGH);  // trigger pin for testing
-                    digitalWrite(3, LOW);
-                    load_voltage = loadVoltage(); // convert to modulo for rolling buffer
-                }
-            }
-            else {
+    comparator_timer = 0;
+    while (comparator_timer < 1000) {
+        //while(!adc->isComplete(ADC_1));
+        if (loadVoltage() < 200) {
+            if (p_peak == 1) {
                 digitalWriteFast(pri_switch, LOW);
+                pri_switch_on = OFF;
+                s_zero = 0;
+                p_peak = 0;
+            }
+            else if (s_zero == 1) {
+                digitalWriteFast(pri_switch, HIGH);
+                pri_switch_on = ON;
                 s_zero = 0;
                 p_peak = 0;
             }
         }
+        else {
+            digitalWriteFast(pri_switch, LOW);
+            pri_switch_on = OFF;
+        }
     }
     digitalWriteFast(pri_switch, LOW); 
-    for (int i = 0;i < 20;i++) {
-        timedBuck(0,5);
+    pri_switch_on = DISABLE;
+    p_peak = 0;
+    s_zero = 0;
+    
+    // buck
+    /*digitalWriteFast(sec_switch, HIGH);
+    sec_switch_on = ON;
+    comparator_timer = 0;
+    while (comparator_timer < 200) {
+        //while(!adc->isComplete(ADC_1));
+        if (loadVoltage() > 8) {
+            if (s_peak == 1) {
+                digitalWriteFast(sec_switch, LOW); // consider writing in isr only for switch-off
+                sec_switch_on = OFF;
+                p_zero = 0;
+                s_peak = 0;
+            }
+            else if (p_zero == 1) {
+                digitalWriteFast(sec_switch, HIGH); // switch-on still raises a ready flag
+                sec_switch_on = ON;
+                p_zero = 0;
+                s_peak = 0;
+            } 
+        }
+        else {
+            digitalWriteFast(sec_switch, LOW);
+            sec_switch_on = DISABLE;
+        }
     }
+    digitalWriteFast(sec_switch, LOW); 
+    sec_switch_on = DISABLE;
+    s_peak = 0;
+    p_zero = 0;
+    */
 }
 
 void loop() {
@@ -59,24 +87,25 @@ void loop() {
 
     if (button1_flag || button2_flag) {
         digitalWriteFast(blue, LOW);
-        timedSquare(50, 50, 200);
+        timedSquare(10, 10, 200);
         digitalWriteFast(blue, HIGH);
         button1_flag = 0;
         button2_flag = 0;
     }
 }
 
+// generates square wave using timing control method
 void timedSquare(unsigned long on_time_milli, unsigned long off_time_milli, float voltage) {
     elapsedMillis pulse_timer;
-    //for (int i = 0; i < 300; i++) { //300 for 5nF, 670 for 20nF
-    //    timedBoost(5,2);
-    //}
+    float load_voltage = 0;
+
+    // boost up and hold at voltage
     pulse_timer = 0;
     while (pulse_timer < on_time_milli) {
         if (adc->isComplete(ADC_1)) {
             load_voltage = loadVoltage();
         }
-        if (load_voltage < voltage) {
+        if (load_voltage < voltage) { // TODO: apply hysteresis to this threshold
             if (load_voltage > 0.95 * voltage) {
                 timedBoost(2,1);
             }
@@ -84,16 +113,16 @@ void timedSquare(unsigned long on_time_milli, unsigned long off_time_milli, floa
                 timedBoost(5,2);
             }
         }
-        // delayMicroseconds(600); // 7 for DEA, 600 for 5nF, 850 for 20nF w/ load sense on
     }
-    //for (int i = 0; i < 120; i++) { // 100 for 5nF, 320 for 20nF
+
+    // buck down and stay at 0
     pulse_timer = 0;
     while (pulse_timer < off_time_milli) {
         if (adc->isComplete(ADC_1)) {
             load_voltage = loadVoltage();
         }
         if (load_voltage > 10) {
-            timedBuck(0,5);
+            timedBuck(0,5); // 0, 5 for 500V
         }
     }
 }
