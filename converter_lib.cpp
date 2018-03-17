@@ -4,6 +4,7 @@
 //Bounce pushbutton2 = Bounce(button2, 10);  // 10 ms debounce
 
 ADC *adc = new ADC();
+ADC::Sync_result result;
 
 float input_voltage = 0;
 float load_voltage = 0;
@@ -53,20 +54,20 @@ void initialize() {
 
     adc->setReference(ADC_REFERENCE::REF_EXT, ADC_0);
     adc->setReference(ADC_REFERENCE::REF_EXT, ADC_1);
-    adc->setSamplingSpeed(ADC_SAMPLING_SPEED::HIGH_SPEED, ADC_0);
-    adc->setConversionSpeed(ADC_CONVERSION_SPEED::HIGH_SPEED, ADC_0);
+    adc->setSamplingSpeed(ADC_SAMPLING_SPEED::VERY_HIGH_SPEED, ADC_0);
+    adc->setConversionSpeed(ADC_CONVERSION_SPEED::VERY_HIGH_SPEED, ADC_0);
     adc->setSamplingSpeed(ADC_SAMPLING_SPEED::VERY_HIGH_SPEED, ADC_1);
     adc->setConversionSpeed(ADC_CONVERSION_SPEED::VERY_HIGH_SPEED, ADC_1);
-    adc->setAveraging(0, ADC_0);
+    adc->setAveraging(4, ADC_0);
     adc->setAveraging(4, ADC_1);
     adc->setResolution(adc_res_bits, ADC_0);
     adc->setResolution(adc_res_bits, ADC_1);
 
     //adc->enableDMA(ADC_0);
     //adc->enableDMA(ADC_1);
-    //adc->startSynchronizedContinuous(load_sense, load_sense);
-    adc->startContinuous(load_sense, ADC_1);
-    adc->startContinuous(load_sense, ADC_0);
+    adc->startSynchronizedContinuous(load_sense, load_sense);
+    //adc->startContinuous(load_sense, ADC_1);
+    //adc->startContinuous(load_sense, ADC_0);
 
     // Turn on load voltage sense
     pinMode(load_sense_disable, OUTPUT); // set to INPUT to turn off
@@ -152,7 +153,8 @@ void intervalReadInputVoltage() {
 //	Obtains load voltage reading
 float loadVoltage() {
     //return (load_adc[0] + load_adc[1])/ 2.0 / adc_res * aref_voltage * 185;
-    load_voltage = (adc->analogReadContinuous(ADC_1) +  adc->analogReadContinuous(ADC_1))/2 / adc_res * aref_voltage * 193;
+    result = adc->readSynchronizedContinuous();
+    load_voltage = (result.result_adc0 + result.result_adc1)/2 / adc_res * aref_voltage * 193;
     return load_voltage;
 }
 
