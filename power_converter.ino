@@ -104,7 +104,7 @@ void timedSquare(unsigned long on_time_milli, unsigned long off_time_milli, floa
     // boost up and hold at voltage
     pulse_timer = 0;
     while (pulse_timer < on_time_milli) {
-        if (adc->isComplete(ADC_1)) {
+        if (adc->isComplete(ADC_0)) {
             load_voltage = loadVoltage();
         }
         if (load_voltage < voltage) { // TODO: apply hysteresis to this threshold
@@ -120,7 +120,7 @@ void timedSquare(unsigned long on_time_milli, unsigned long off_time_milli, floa
     // buck down and stay at 0
     pulse_timer = 0;
     while (pulse_timer < off_time_milli) {
-        if (adc->isComplete(ADC_1)) {
+        if (adc->isComplete(ADC_0)) {
             load_voltage = loadVoltage();
         }
         if (load_voltage > 10) {

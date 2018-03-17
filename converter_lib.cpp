@@ -68,8 +68,9 @@ void initialize() {
 
     adc->enableDMA(ADC_0);
     adc->enableDMA(ADC_1);
-    adc->startSynchronizedContinuous(load_sense, load_sense);
-    //adc->startContinuous(load_sense, ADC_0);
+    //adc->startSynchronizedContinuous(load_sense, load_sense);
+    adc->startContinuous(load_sense, ADC_0);
+    adc->startContinuous(load_sense, ADC_1);
 
     // Turn on load voltage sense
     pinMode(load_sense_disable, OUTPUT); // set to INPUT to turn off
@@ -171,26 +172,19 @@ float loadVoltage() {
 
 // timing-based switching 
 void timedBoost(unsigned int on, unsigned int off) { // 5ms/4ms -> 5ms/2ms works ok
-    elapsedMicros timer;
-
     digitalWriteFast(pri_switch, HIGH);
-    timer = 0;
-    while(timer < on);
+    delayMicroseconds(on);
+
     digitalWriteFast(pri_switch, LOW);
-    timer = 0;
-    while(timer < off);
+    delayMicroseconds(off);
 }
 
 void timedBuck(unsigned int on, unsigned int off) {
-    elapsedMicros timer;
-
     digitalWriteFast(sec_switch, HIGH);
-    timer = 0;
-    while(timer < on);
+    delayMicroseconds(on);
 
     digitalWriteFast(sec_switch, LOW);
-    timer = 0;
-    while(timer < off);
+    delayMicroseconds(off);
 }
 
 // comparator based switching
