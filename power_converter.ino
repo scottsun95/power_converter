@@ -21,16 +21,15 @@ void setup() {
     pri_switch_on = ON;
 
     comparator_timer = 0;
-    while (comparator_timer < 1000) {
-        //while(!adc->isComplete(ADC_1));
+    while (comparator_timer < 800) {
         if (loadVoltage() < 200) {
-            if (p_peak == 1) {
+            /*if (p_peak == 1) {
                 digitalWriteFast(pri_switch, LOW);
                 pri_switch_on = OFF;
                 s_zero = 0;
                 p_peak = 0;
             }
-            else if (s_zero == 1) {
+            else*/ if (s_zero == 1) {
                 digitalWriteFast(pri_switch, HIGH);
                 pri_switch_on = ON;
                 s_zero = 0;
@@ -48,19 +47,19 @@ void setup() {
     s_zero = 0;
     
     // buck
-    /*digitalWriteFast(sec_switch, HIGH);
+    digitalWriteFast(sec_switch, HIGH);
     sec_switch_on = ON;
+
     comparator_timer = 0;
-    while (comparator_timer < 200) {
-        //while(!adc->isComplete(ADC_1));
+    while (comparator_timer < 300) {
         if (loadVoltage() > 8) {
-            if (s_peak == 1) {
+            /*if (s_peak == 1) {
                 digitalWriteFast(sec_switch, LOW); // consider writing in isr only for switch-off
                 sec_switch_on = OFF;
                 p_zero = 0;
                 s_peak = 0;
             }
-            else if (p_zero == 1) {
+            else */if (p_zero == 1) {
                 digitalWriteFast(sec_switch, HIGH); // switch-on still raises a ready flag
                 sec_switch_on = ON;
                 p_zero = 0;
@@ -76,7 +75,7 @@ void setup() {
     sec_switch_on = DISABLE;
     s_peak = 0;
     p_zero = 0;
-    */
+    
 }
 
 void loop() {
@@ -96,20 +95,27 @@ void loop() {
 void timedSquare(unsigned long on_time_milli, unsigned long off_time_milli, float voltage) {
     elapsedMillis pulse_timer;
     float load_voltage = 0;
+    uint8_t level = 0;
 
     // boost up and hold at voltage
     pulse_timer = 0;
     while (pulse_timer < on_time_milli) {
-        if (adc->isComplete(ADC_1)) {
+        if (level == 1) {
+            while (!adc->isComplete(ADC_1));
             load_voltage = loadVoltage();
-        }
-        if (load_voltage < voltage) { // TODO: apply hysteresis to this threshold
-            if (load_voltage > 0.95 * voltage) {
+            if (load_voltage < 0.94 * voltage) {
                 timedBoost(2,1);
             }
-            else {
-                timedBoost(5,2);
+            else if (load_voltage < 0.98 * voltage) {
+                timedBoost(1,1);
+                delayMicroseconds(8);
             }
+        }
+        else {
+            if (loadVoltage() > 0.9 * voltage) {
+                level = 1;
+            }
+            timedBoost(5,2);
         }
     }
 
@@ -119,8 +125,8 @@ void timedSquare(unsigned long on_time_milli, unsigned long off_time_milli, floa
         if (adc->isComplete(ADC_1)) {
             load_voltage = loadVoltage();
         }
-        if (load_voltage > 10) {
-            timedBuck(0,5); // 0, 5 for 500V
+        if (load_voltage > 8) {
+            timedBuck(1,5); // 0, 5 for 500V
         }
     }
 }

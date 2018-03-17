@@ -96,11 +96,11 @@ void initialize() {
     pinMode(P1, INPUT);
     attachInterrupt(P1, p_curr_peak, RISING);
     pinMode(P2, INPUT);
-    //attachInterrupt(P2, p_curr_zero, RISING);
+    attachInterrupt(P2, p_curr_zero, RISING);
     pinMode(S1, INPUT);
     attachInterrupt(S1, s_curr_zero, RISING);
     pinMode(S2, INPUT);
-    //attachInterrupt(S2, s_curr_peak, RISING);
+    attachInterrupt(S2, s_curr_peak, RISING);
 
     // Configure I2C bus for DACs
     Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_EXT, 400000);
@@ -108,21 +108,27 @@ void initialize() {
 
     // Transmit to Slave
     Wire.beginTransmission(P_DAC);  // Slave address
-    Wire.write(0b00101111);         // Set both of DAC1 voltages to the same
+    Wire.write(0b00100001);         // Set output B of DAC1 
     Wire.write(0b01010000);         // 0b00111110, 0b10000000 for 0.7V, which is actually 0.9A
     Wire.write(0b10000000); 
     Wire.endTransmission();         // Transmit to Slave
 
-    Wire.beginTransmission(S_DAC);  // Slave address
-    Wire.write(0b00100001);       // Write to I2C
+    Wire.beginTransmission(P_DAC);  
+    Wire.write(0b00100000);         // Set output A of DAC1 
+    Wire.write(0b00000001);         
+    Wire.write(0b00000000);         
+    Wire.endTransmission();         
+
+    Wire.beginTransmission(S_DAC);  
+    Wire.write(0b00100001);         // Set output B of DAC2
     Wire.write(0b01110000); 
     Wire.write(0); 
     Wire.endTransmission();
     
-    Wire.beginTransmission(S_DAC);  // Slave address
-    Wire.write(0b00100000);       // Write to I2C
-    Wire.write(0b01111100); 
-    Wire.write(0); 
+    Wire.beginTransmission(S_DAC);  
+    Wire.write(0b00100000);       // Set output A of DAC2 to 0.6V below B
+    Wire.write(0b00010000); 
+    Wire.write(0b00000000); 
     Wire.endTransmission();
 
     pinMode(3, OUTPUT); // trigger for load voltage sense
@@ -154,7 +160,7 @@ void intervalReadInputVoltage() {
 float loadVoltage() {
     //return (load_adc[0] + load_adc[1])/ 2.0 / adc_res * aref_voltage * 185;
     result = adc->readSynchronizedContinuous();
-    load_voltage = (result.result_adc0 + result.result_adc1)/2 / adc_res * aref_voltage * 193;
+    load_voltage = (result.result_adc0 + result.result_adc1) / 2.0 / adc_res * aref_voltage * 193;
     return load_voltage;
 }
 
@@ -203,7 +209,9 @@ void button2Pressed() {
 // comparator threshold interrupts
 void p_curr_peak() {
     if (pri_switch_on == ON) {
-        p_peak = 1;
+        digitalWriteFast(pri_switch, LOW);
+        pri_switch_on = OFF;
+        s_zero = 0;
     }
     else {
         p_peak = 0;
@@ -221,7 +229,9 @@ void s_curr_zero() {
 
 void s_curr_peak() {
     if (sec_switch_on == ON) {
-        s_peak = 1;
+        sec_switch_on = OFF;
+        p_zero = 0;
+        digitalWriteFast(sec_switch, LOW);
     }
     else {
         s_peak = 0;
