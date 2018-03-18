@@ -281,8 +281,10 @@ void p_curr_zero() {
 void waveform_gen(float* waveform) {
     elapsedMicros loop_timer;
     float error = 0;
-    float boost_gain = 1.0 / 5;
-    float buck_gain = 1.0 / 30;
+    float error_integral = 0;
+    float boost_gain = 0.1;
+    float buck_gain = 0.025;
+    float int_gain = 0.005;
     float time = 0;
 
     for (int i = 0; i < wave_points; i++) {
@@ -292,15 +294,20 @@ void waveform_gen(float* waveform) {
             load_voltage = loadVoltage();
             if (load_voltage > waveform[i] * top_margin) {
                 error = load_voltage - waveform[i];
-                time = buck_gain * error;
-                time = time < 1 ? time : 1;
-                timedBuck(time, 2*time);
+                error_integral += error;
+                time = buck_gain * error + int_gain * error_integral;
+                time = time < 2 ? time : 1;
+                if (time > 0.1) {
+                    timedBuck(time, 1.5*time);
+                }
             }
             else if (load_voltage < waveform[i] * bot_margin) {
                 error = waveform[i] - load_voltage;
-                time = boost_gain * error;
+                time = boost_gain * error + int_gain * error_integral;
                 time = time < 5 ? time : 5;
-                timedBoost(time,0.5*time); 
+                if (time > 0.1) {
+                    timedBoost(time,0.5*time); 
+                }
             }
         }
     }
@@ -311,9 +318,9 @@ void waveform_gen(float* waveform) {
 **********************/
 // delays based on number of CPU cycles, disables interrupts
 void delayMicroCycles(float microseconds) {
+    unsigned long cycles = ARM_DWT_CYCCNT;
     unsigned long num_cycles_delay = microseconds * F_CPU * 1e-6;
     cli();
-    unsigned long cycles = ARM_DWT_CYCCNT;
     while(ARM_DWT_CYCCNT < num_cycles_delay + cycles);
     sei();
 }
