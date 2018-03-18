@@ -15,7 +15,7 @@
 #define OFF 0
 #define DISABLE -1
 
-#define TIME_MODE 0
+#define TIME_MODE 1
 
 const uint8_t pri_switch = 22;
 const uint8_t pri_switch_disable = 23;
@@ -50,14 +50,23 @@ const float aref_voltage = 3.1624;
 const uint8_t adc_res_bits = 12;
 const float adc_res = pow(2, adc_res_bits) - 1;
 
+// waveform generator constants
+const float top_margin = 1.05;
+const float bot_margin = 0.95;
+const int16_t voltage_amplitude = 300;
+const float sample_time = 0.001;
+const uint16_t freq = 10;
+const uint16_t wave_points = 100;
+extern float sine_wave[wave_points];
+
 void initialize();
 
 float inputVoltage();
 void intervalReadInputVoltage();
 float loadVoltage();
 
-void timedBoost(unsigned int on, unsigned int off);
-void timedBuck(unsigned int on, unsigned int off);
+void timedBoost(float on, float off);
+void timedBuck(float on, float off);
 void comparatorBoost();
 void comparatorBuck();
 
@@ -70,6 +79,8 @@ void p_curr_zero();
 void s_curr_peak();
 
 void waveform_gen(float* waveform);
+
+void delayMicroCycles(float microseconds);
 
 extern volatile uint8_t button1_flag;
 extern volatile uint8_t button2_flag;

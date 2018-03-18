@@ -13,7 +13,7 @@ void setup() {
     digitalWriteFast(pri_switch_disable, LOW);
     digitalWriteFast(sec_switch_disable, LOW);
 
-    s_zero = 0;
+/*    s_zero = 0;
     p_peak = 0;
     digitalWriteFast(pri_switch, HIGH);
     pri_switch_on = ON;
@@ -21,13 +21,7 @@ void setup() {
     comparator_timer = 0;
     while (comparator_timer < 800) {
         if (loadVoltage() < 200) {
-            /*if (p_peak == 1) {
-                digitalWriteFast(pri_switch, LOW);
-                pri_switch_on = OFF;
-                s_zero = 0;
-                p_peak = 0;
-            }
-            else*/ if (s_zero == 1) {
+            if (s_zero == 1) {
                 digitalWriteFast(pri_switch, HIGH);
                 pri_switch_on = ON;
                 s_zero = 0;
@@ -51,13 +45,7 @@ void setup() {
     comparator_timer = 0;
     while (comparator_timer < 300) {
         if (loadVoltage() > 8) {
-            /*if (s_peak == 1) {
-                digitalWriteFast(sec_switch, LOW); // consider writing in isr only for switch-off
-                sec_switch_on = OFF;
-                p_zero = 0;
-                s_peak = 0;
-            }
-            else */if (p_zero == 1) {
+            if (p_zero == 1) {
                 digitalWriteFast(sec_switch, HIGH); // switch-on still raises a ready flag
                 sec_switch_on = ON;
                 p_zero = 0;
@@ -73,18 +61,21 @@ void setup() {
     sec_switch_on = DISABLE;
     s_peak = 0;
     p_zero = 0;
-    
+    */
 }
 
 void loop() {
     // updates alarm timer
-    Alarm.delay(0);
+    //Alarm.delay(0);
 
-    if (button1_flag || button2_flag) {
+    if (button1_flag) {
         digitalWriteFast(blue, LOW);
         timedSquare(10, 10, 200);
         digitalWriteFast(blue, HIGH);
         button1_flag = 0;
+    }
+    else if (button2_flag) {
+        waveform_gen(sine_wave);
         button2_flag = 0;
     }
 }

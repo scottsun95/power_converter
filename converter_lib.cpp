@@ -22,14 +22,6 @@ volatile uint8_t p_zero = 0;
 int8_t pri_switch_on = DISABLE;
 int8_t sec_switch_on = DISABLE;
 
-// waveform generator constants
-const float top_margin = 1.1;
-const float bot_margin = 0.9;
-const int16_t voltage_amplitude = 200;
-const float sample_time = 0.001;
-const uint16_t freq = 10;
-const uint16_t wave_points = 100;
-
 // defined waveforms
 float sine_wave[wave_points];
 
@@ -43,7 +35,7 @@ void initialize() {
     pinMode(13, OUTPUT);
     digitalWriteFast(13, HIGH);
 
-    Serial.begin(9600);
+    Serial.begin(115200);
 
     // Disable secondary-side gate drivers
     pinMode(sec_switch, OUTPUT);
@@ -91,7 +83,7 @@ void initialize() {
     // Set up input voltage sense
     pinMode(input_sense_disable, OUTPUT);
     input_voltage = inputVoltage();
-    Alarm.timerRepeat(60, intervalReadInputVoltage);
+    //Alarm.timerRepeat(60, intervalReadInputVoltage);
     
     // configure pushbuttons and attach interrupts
     pinMode(button1, INPUT_PULLUP);
@@ -154,6 +146,10 @@ void initialize() {
         sine_wave[i] = voltage_amplitude * (-cos(2*PI*freq*i*sample_time) + 1) / 2;
     }
 
+    // turn on cycle counter
+    ARM_DEMCR |= ARM_DEMCR_TRCENA;
+    ARM_DWT_CTRL |= ARM_DWT_CTRL_CYCCNTENA;
+
     pinMode(3, OUTPUT); // trigger for load voltage sense
 
 
@@ -193,20 +189,20 @@ float loadVoltage() {
 *************************/
 
 // timing-based switching 
-void timedBoost(unsigned int on, unsigned int off) { // 5ms/4ms -> 5ms/2ms works ok
+void timedBoost(float on, float off) { // 5ms/4ms -> 5ms/2ms works ok
     digitalWriteFast(pri_switch, HIGH);
-    delayMicroseconds(on);
+    delayMicroCycles(on);
 
     digitalWriteFast(pri_switch, LOW);
-    delayMicroseconds(off);
+    delayMicroCycles(off);
 }
 
-void timedBuck(unsigned int on, unsigned int off) {
+void timedBuck(float on, float off) {
     digitalWriteFast(sec_switch, HIGH);
-    delayMicroseconds(on);
+    delayMicroCycles(on);
 
     digitalWriteFast(sec_switch, LOW);
-    delayMicroseconds(off);
+    delayMicroCycles(off);
 }
 
 void comparatorBoost() {
@@ -214,6 +210,14 @@ void comparatorBoost() {
 }
 
 void comparatorBuck() {
+
+}
+
+void hybridBoost() {
+
+}
+
+void hybridBuck() {
 
 }
 
@@ -253,9 +257,9 @@ void s_curr_zero() {
 
 void s_curr_peak() {
     if (sec_switch_on == ON) {
+        digitalWriteFast(sec_switch, LOW);
         sec_switch_on = OFF;
         p_zero = 0;
-        digitalWriteFast(sec_switch, LOW);
     }
     else {
         s_peak = 0;
@@ -276,6 +280,10 @@ void p_curr_zero() {
 ************************/
 void waveform_gen(float* waveform) {
     elapsedMicros loop_timer;
+    float error = 0;
+    float boost_gain = 1.0 / 5;
+    float buck_gain = 1.0 / 30;
+    float time = 0;
 
     for (int i = 0; i < wave_points; i++) {
         loop_timer = 0;
@@ -283,18 +291,32 @@ void waveform_gen(float* waveform) {
             while(!adc->isComplete(ADC_1));
             load_voltage = loadVoltage();
             if (load_voltage > waveform[i] * top_margin) {
-                timedBuck(1,4);
+                error = load_voltage - waveform[i];
+                time = buck_gain * error;
+                time = time < 1 ? time : 1;
+                timedBuck(time, 2*time);
             }
             else if (load_voltage < waveform[i] * bot_margin) {
-                timedBoost(5,2);
-            }
-            else {
-
+                error = waveform[i] - load_voltage;
+                time = boost_gain * error;
+                time = time < 5 ? time : 5;
+                timedBoost(time,0.5*time); 
             }
         }
     }
 }
 
+/*********************
+    Timing Functions
+**********************/
+// delays based on number of CPU cycles, disables interrupts
+void delayMicroCycles(float microseconds) {
+    unsigned long num_cycles_delay = microseconds * F_CPU * 1e-6;
+    cli();
+    unsigned long cycles = ARM_DWT_CYCCNT;
+    while(ARM_DWT_CYCCNT < num_cycles_delay + cycles);
+    sei();
+}
 
 
 /*******************
