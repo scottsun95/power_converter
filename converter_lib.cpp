@@ -22,6 +22,8 @@ volatile uint8_t p_zero = 0;
 int8_t pri_switch_on = DISABLE;
 int8_t sec_switch_on = DISABLE;
 
+float alpha = 0.7;
+
 // defined waveforms
 float sine_wave[wave_points];
 
@@ -180,7 +182,8 @@ void intervalReadInputVoltage() {
 float loadVoltage() {
     //return (load_adc[0] + load_adc[1])/ 2.0 / adc_res * aref_voltage * 185;
     result = adc->readSynchronizedContinuous();
-    load_voltage = (result.result_adc0 + result.result_adc1) / 2.0 / adc_res * aref_voltage * 193;
+    load_voltage = alpha * (result.result_adc0 + result.result_adc1) / 2.0 / adc_res * aref_voltage * 193 
+        + (1-alpha) * load_voltage;
     return load_voltage;
 }
 
@@ -282,9 +285,8 @@ void waveform_gen(float* waveform) {
     elapsedMicros loop_timer;
     float error = 0;
     float error_integral = 0;
-    float boost_gain = 0.1;
-    float buck_gain = 0.025;
-    float int_gain = 0.005;
+    float prop_gain = 0.03;
+    float int_gain = 0.0001;
     float time = 0;
 
     for (int i = 0; i < wave_points; i++) {
@@ -292,21 +294,21 @@ void waveform_gen(float* waveform) {
         while (loop_timer < sample_time * 1e6) {
             while(!adc->isComplete(ADC_1));
             load_voltage = loadVoltage();
-            if (load_voltage > waveform[i] * top_margin) {
-                error = load_voltage - waveform[i];
-                error_integral += error;
-                time = buck_gain * error + int_gain * error_integral;
-                time = time < 2 ? time : 1;
-                if (time > 0.1) {
-                    timedBuck(time, 1.5*time);
+            if (load_voltage > 500) return;
+            error = waveform[i] - load_voltage;
+            error_integral += error;
+            time = prop_gain * error + int_gain * error_integral;
+            if (time > 0) {
+                time = time < 5 ? time : 5;
+                if (time > 0.01) {
+                    timedBoost(time, 0.5*time); 
                 }
             }
-            else if (load_voltage < waveform[i] * bot_margin) {
-                error = waveform[i] - load_voltage;
-                time = boost_gain * error + int_gain * error_integral;
-                time = time < 5 ? time : 5;
-                if (time > 0.1) {
-                    timedBoost(time,0.5*time); 
+            else if (time < 0) {
+                time = -0.2*time;
+                time = time < 0.8 ? time : 0.8;
+                if (time > 0.01) {
+                    timedBuck(time, 2*time); 
                 }
             }
         }
