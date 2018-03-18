@@ -6,18 +6,33 @@
 ADC *adc = new ADC();
 ADC::Sync_result result;
 
+// global voltage sense values
 float input_voltage = 0;
 float load_voltage = 0;
 
+// button flags
 volatile uint8_t button1_flag = 0;
 volatile uint8_t button2_flag = 0;
 
+// switching variables
 volatile uint8_t s_zero = 0;
 volatile uint8_t p_peak = 0;
 volatile uint8_t s_peak = 0;
 volatile uint8_t p_zero = 0;
 int8_t pri_switch_on = DISABLE;
 int8_t sec_switch_on = DISABLE;
+
+// waveform generator constants
+const float top_margin = 1.1;
+const float bot_margin = 0.9;
+const int16_t voltage_amplitude = 200;
+const float sample_time = 0.001;
+const uint16_t freq = 10;
+const uint16_t wave_points = 100;
+
+// defined waveforms
+float sine_wave[wave_points];
+
 
 /*
 	Initializes circuit board with all supply rails enabled 
@@ -94,13 +109,15 @@ void initialize() {
 
     // configure interrupt pins
     pinMode(P1, INPUT);
-    attachInterrupt(P1, p_curr_peak, RISING);
     pinMode(P2, INPUT);
-    attachInterrupt(P2, p_curr_zero, RISING);
     pinMode(S1, INPUT);
-    attachInterrupt(S1, s_curr_zero, RISING);
     pinMode(S2, INPUT);
-    attachInterrupt(S2, s_curr_peak, RISING);
+    if (!TIME_MODE) {
+        attachInterrupt(P1, p_curr_peak, RISING);
+        attachInterrupt(P2, p_curr_zero, RISING);
+        attachInterrupt(S1, s_curr_zero, RISING);
+        attachInterrupt(S2, s_curr_peak, RISING);
+    }
 
     // Configure I2C bus for DACs
     Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_EXT, 400000);
@@ -115,7 +132,7 @@ void initialize() {
 
     Wire.beginTransmission(P_DAC);  
     Wire.write(0b00100000);         // Set output A of DAC1 
-    Wire.write(0b00000001);         
+    Wire.write(0b00000010);         
     Wire.write(0b00000000);         
     Wire.endTransmission();         
 
@@ -131,7 +148,14 @@ void initialize() {
     Wire.write(0b00000000); 
     Wire.endTransmission();
 
+
+    // define sine wave
+    for (int i = 0; i < wave_points; i++) {
+        sine_wave[i] = voltage_amplitude * (-cos(2*PI*freq*i*sample_time) + 1) / 2;
+    }
+
     pinMode(3, OUTPUT); // trigger for load voltage sense
+
 
 }
 
@@ -246,6 +270,32 @@ void p_curr_zero() {
         p_zero = 0;
     }
 }
+
+/***********************
+    Waveform Generator
+************************/
+void waveform_gen(float* waveform) {
+    elapsedMicros loop_timer;
+
+    for (int i = 0; i < wave_points; i++) {
+        loop_timer = 0;
+        while (loop_timer < sample_time * 1e6) {
+            while(!adc->isComplete(ADC_1));
+            load_voltage = loadVoltage();
+            if (load_voltage > waveform[i] * top_margin) {
+                timedBuck(1,4);
+            }
+            else if (load_voltage < waveform[i] * bot_margin) {
+                timedBoost(5,2);
+            }
+            else {
+
+            }
+        }
+    }
+}
+
+
 
 /*******************
     Math Functions

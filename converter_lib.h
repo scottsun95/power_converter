@@ -15,6 +15,8 @@
 #define OFF 0
 #define DISABLE -1
 
+#define TIME_MODE 0
+
 const uint8_t pri_switch = 22;
 const uint8_t pri_switch_disable = 23;
 
@@ -67,6 +69,7 @@ void s_curr_zero();
 void p_curr_zero();
 void s_curr_peak();
 
+void waveform_gen(float* waveform);
 
 extern volatile uint8_t button1_flag;
 extern volatile uint8_t button2_flag;
