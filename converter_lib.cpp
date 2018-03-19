@@ -22,7 +22,7 @@ volatile uint8_t p_zero = 0;
 int8_t pri_switch_on = DISABLE;
 int8_t sec_switch_on = DISABLE;
 
-float alpha = 0.7;
+float alpha = 0.9;
 
 // defined waveforms
 float sine_wave[wave_points];
@@ -182,8 +182,8 @@ void intervalReadInputVoltage() {
 float loadVoltage() {
     //return (load_adc[0] + load_adc[1])/ 2.0 / adc_res * aref_voltage * 185;
     result = adc->readSynchronizedContinuous();
-    load_voltage = alpha * (result.result_adc0 + result.result_adc1) / 2.0 / adc_res * aref_voltage * 193 
-        + (1-alpha) * load_voltage;
+    load_voltage = alpha * 0.5*(result.result_adc0 + result.result_adc1) / adc_res * aref_voltage * 193 
+        + (1.0-alpha) * load_voltage;
     return load_voltage;
 }
 
@@ -284,18 +284,20 @@ void p_curr_zero() {
 void waveform_gen(float* waveform) {
     elapsedMicros loop_timer;
     float error = 0;
-    float error_integral = 0;
-    float prop_gain = 0.03;
+    float error_integral = 0; // goes up to 130000 by itself
+    float prop_gain = 0.1;
     float int_gain = 0.0001;
     float time = 0;
 
     for (int i = 0; i < wave_points; i++) {
         loop_timer = 0;
+
         while (loop_timer < sample_time * 1e6) {
             while(!adc->isComplete(ADC_1));
             load_voltage = loadVoltage();
-            if (load_voltage > 500) return;
+            if (load_voltage > 550) return; // emergency failsafe
             error = waveform[i] - load_voltage;
+
             error_integral += error;
             time = prop_gain * error + int_gain * error_integral;
             if (time > 0) {
@@ -305,13 +307,17 @@ void waveform_gen(float* waveform) {
                 }
             }
             else if (time < 0) {
-                time = -0.2*time;
-                time = time < 0.8 ? time : 0.8;
-                if (time > 0.01) {
+                time = -0.005*time;
+                time = time < 0.02 ? time : 0.02;
+                if (time > 0.011) {
                     timedBuck(time, 2*time); 
                 }
+                /*else if (time < 0.01 && time > 0.008) {
+                    timedBuck(0.01, 0.015); 
+                }*/
             }
         }
+        error_integral = 0;
     }
 }
 
@@ -322,9 +328,13 @@ void waveform_gen(float* waveform) {
 void delayMicroCycles(float microseconds) {
     unsigned long cycles = ARM_DWT_CYCCNT;
     unsigned long num_cycles_delay = microseconds * F_CPU * 1e-6;
-    cli();
+    if (!TIME_MODE) {
+        cli();
+    }
     while(ARM_DWT_CYCCNT < num_cycles_delay + cycles);
-    sei();
+    if (!TIME_MODE) {
+        sei();
+    }
 }
 
 
