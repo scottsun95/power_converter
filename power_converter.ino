@@ -75,7 +75,9 @@ void loop() {
         button1_flag = 0;
     }
     else if (button2_flag) {
-        waveform_gen(sine_wave);
+        for (int i = 0; i < 50; i++) {
+            waveform_gen(sine_wave);
+        }
         button2_flag = 0;
     }
 }

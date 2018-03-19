@@ -42,12 +42,14 @@ void initialize() {
     // Disable secondary-side gate drivers
     pinMode(sec_switch, OUTPUT);
     digitalWriteFast(sec_switch, LOW);
+    CORE_PIN20_CONFIG &= ~PORT_PCR_SRE; //slew rate limiting off
     pinMode(sec_switch_disable, OUTPUT);
     digitalWriteFast(sec_switch_disable, HIGH);
 
     // Disable primary-side gate drivers
     pinMode(pri_switch, OUTPUT);
     digitalWriteFast(pri_switch, LOW);
+    CORE_PIN22_CONFIG &= ~PORT_PCR_SRE; //slew rate limiting off
     pinMode(pri_switch_disable, OUTPUT);
     digitalWriteFast(pri_switch_disable, HIGH);
 
@@ -285,8 +287,8 @@ void waveform_gen(float* waveform) {
     elapsedMicros loop_timer;
     float error = 0;
     float error_integral = 0; // goes up to 130000 by itself
-    float prop_gain = 0.1;
-    float int_gain = 0.0001;
+    float prop_gain = 0.3;
+    float int_gain = 0.01;
     float time = 0;
 
     for (int i = 0; i < wave_points; i++) {
@@ -302,19 +304,24 @@ void waveform_gen(float* waveform) {
             time = prop_gain * error + int_gain * error_integral;
             if (time > 0) {
                 time = time < 5 ? time : 5;
-                if (time > 0.01) {
+                if (time > 0.011) {
                     timedBoost(time, 0.5*time); 
+                }
+                else if (time < 0.011 && time > 0.007) {
+                    digitalWriteFast(pri_switch, HIGH);
+                    digitalWriteFast(pri_switch, LOW); 
                 }
             }
             else if (time < 0) {
-                time = -0.005*time;
-                time = time < 0.02 ? time : 0.02;
+                time = -0.001*time;
+                time = time < 0.1 ? time : 0.1;
                 if (time > 0.011) {
                     timedBuck(time, 2*time); 
                 }
-                /*else if (time < 0.01 && time > 0.008) {
-                    timedBuck(0.01, 0.015); 
-                }*/
+                else if (time < 0.011 && time > 0.007) {
+                    digitalWriteFast(sec_switch, HIGH);
+                    digitalWriteFast(sec_switch, LOW); 
+                }
             }
         }
         error_integral = 0;
@@ -327,14 +334,14 @@ void waveform_gen(float* waveform) {
 // delays based on number of CPU cycles, disables interrupts
 void delayMicroCycles(float microseconds) {
     unsigned long cycles = ARM_DWT_CYCCNT;
-    unsigned long num_cycles_delay = microseconds * F_CPU * 1e-6;
-    if (!TIME_MODE) {
+    unsigned long num_cycles_delay = microseconds * F_CPU * 1e-6 - 5; //5 offset for added instructions
+    /*if (!TIME_MODE) {
         cli();
-    }
+    }*/
     while(ARM_DWT_CYCCNT < num_cycles_delay + cycles);
-    if (!TIME_MODE) {
+    /*if (!TIME_MODE) {
         sei();
-    }
+    }*/
 }
 
 
