@@ -70,14 +70,18 @@ void loop() {
 
     if (button1_flag) {
         digitalWriteFast(blue, LOW);
-        timedSquare(10, 10, 200);
+        for (int i = 0; i < 20; i++) {
+            timedSquare(50, 50, 200);
+        }
         digitalWriteFast(blue, HIGH);
         button1_flag = 0;
     }
     else if (button2_flag) {
-        for (int i = 0; i < 50; i++) {
+        digitalWriteFast(red, LOW);
+        for (int i = 0; i < 20; i++) {
             waveform_gen(sine_wave);
         }
+        digitalWriteFast(red, HIGH);
         button2_flag = 0;
     }
 }
@@ -94,30 +98,31 @@ void timedSquare(unsigned long on_time_milli, unsigned long off_time_milli, floa
         if (level == 1) {
             while (!adc->isComplete(ADC_1));
             load_voltage = loadVoltage();
-            if (load_voltage < 0.94 * voltage) {
-                timedBoost(2,1);
+            if (load_voltage < 0.95 * voltage) {
+                timedBoost(3,2);            // reduce for piezo
             }
             else if (load_voltage < 0.98 * voltage) {
-                timedBoost(1,1);
-                delayMicroseconds(8);
+                timedBoost(0.5,1);
             }
         }
         else {
-            if (loadVoltage() > 0.9 * voltage) {
+            if (loadVoltage() > 0.90 * voltage) {
                 level = 1;
             }
-            timedBoost(5,2);
+            timedBoost(5,3);
         }
     }
 
     // buck down and stay at 0
     pulse_timer = 0;
     while (pulse_timer < off_time_milli) {
-        if (adc->isComplete(ADC_1)) {
-            load_voltage = loadVoltage();
+        while (!adc->isComplete(ADC_1));
+        load_voltage = loadVoltage();
+        if (load_voltage > 400) {
+            timedBuck(0.1,0.5); 
         }
-        if (load_voltage > 8) {
-            timedBuck(1,5); // 0, 5 for 500V
+        else if (load_voltage > 8) {
+            timedBuck(0.3,0.5); 
         }
     }
 }

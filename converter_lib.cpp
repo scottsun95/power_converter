@@ -184,7 +184,7 @@ void intervalReadInputVoltage() {
 float loadVoltage() {
     //return (load_adc[0] + load_adc[1])/ 2.0 / adc_res * aref_voltage * 185;
     result = adc->readSynchronizedContinuous();
-    load_voltage = alpha * 0.5*(result.result_adc0 + result.result_adc1) / adc_res * aref_voltage * 193 
+    load_voltage = alpha * 0.5*(result.result_adc0 + result.result_adc1) / adc_res * aref_voltage * 190 
         + (1.0-alpha) * load_voltage;
     return load_voltage;
 }
