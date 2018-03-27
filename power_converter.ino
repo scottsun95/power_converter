@@ -121,7 +121,7 @@ void timedSquare(unsigned long on_time_milli, unsigned long off_time_milli, floa
         if (load_voltage > 400) {
             timedBuck(0.1,0.5); 
         }
-        else if (load_voltage > 8) {
+        else if (load_voltage > 3) {
             timedBuck(0.3,0.5); 
         }
     }

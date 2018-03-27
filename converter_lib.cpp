@@ -22,7 +22,7 @@ volatile uint8_t p_zero = 0;
 int8_t pri_switch_on = DISABLE;
 int8_t sec_switch_on = DISABLE;
 
-float alpha = 0.9;
+float alpha = 0.8;
 
 // defined waveforms
 float sine_wave[wave_points];
@@ -82,7 +82,7 @@ void initialize() {
 
     // Turn on load voltage sense
     pinMode(load_sense_disable, OUTPUT); // set to INPUT to turn off
-    digitalWriteFast(load_sense_disable, LOW);
+    digitalWriteFast(load_sense_disable, HIGH);
 
     // Set up input voltage sense
     pinMode(input_sense_disable, OUTPUT);
@@ -287,8 +287,8 @@ void waveform_gen(float* waveform) {
     elapsedMicros loop_timer;
     float error = 0;
     float error_integral = 0; // goes up to 130000 by itself
-    float prop_gain = 0.3;
-    float int_gain = 0.01;
+    float prop_gain = 0.15;
+    float int_gain = 0.06;
     float time = 0;
 
     for (int i = 0; i < wave_points; i++) {
@@ -307,18 +307,18 @@ void waveform_gen(float* waveform) {
                 if (time > 0.011) {
                     timedBoost(time, 0.5*time); 
                 }
-                else if (time < 0.011 && time > 0.007) {
+                else if (time < 0.011 && time > 0.006) {
                     digitalWriteFast(pri_switch, HIGH);
                     digitalWriteFast(pri_switch, LOW); 
                 }
             }
             else if (time < 0) {
                 time = -0.001*time;
-                time = time < 0.1 ? time : 0.1;
+                time = time < 0.5 ? time : 0.5;
                 if (time > 0.011) {
                     timedBuck(time, 2*time); 
                 }
-                else if (time < 0.011 && time > 0.007) {
+                else if (time < 0.011 && time > 0.005) {
                     digitalWriteFast(sec_switch, HIGH);
                     digitalWriteFast(sec_switch, LOW); 
                 }

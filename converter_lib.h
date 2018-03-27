@@ -55,8 +55,8 @@ const float top_margin = 1.03;
 const float bot_margin = 0.9;
 const int16_t voltage_amplitude = 200;
 const float sample_time = 0.00005;
-const uint16_t freq = 100;
-const uint16_t wave_points = 200;
+const uint16_t freq = 10;
+const uint16_t wave_points = 2000;
 extern float sine_wave[wave_points];
 
 void initialize();
