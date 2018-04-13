@@ -71,7 +71,7 @@ void loop() {
     if (button1_flag) {
         digitalWriteFast(blue, LOW);
         for (int i = 0; i < 20; i++) {
-            timedSquare(50, 50, 200);
+            timedSquare(50, 50, 500);
         }
         digitalWriteFast(blue, HIGH);
         button1_flag = 0;
@@ -98,11 +98,8 @@ void timedSquare(unsigned long on_time_milli, unsigned long off_time_milli, floa
         if (level == 1) {
             while (!adc->isComplete(ADC_1));
             load_voltage = loadVoltage();
-            if (load_voltage < 0.95 * voltage) {
-                timedBoost(3,2);            // reduce for piezo
-            }
-            else if (load_voltage < 0.98 * voltage) {
-                timedBoost(0.5,1);
+            if (load_voltage < 0.98 * voltage) {
+                timedBoost(3,2);
             }
         }
         else {

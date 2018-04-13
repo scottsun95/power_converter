@@ -1,8 +1,5 @@
 #include "converter_lib.h"
 
-//Bounce pushbutton1 = Bounce(button1, 10);  // 10 ms debounce
-//Bounce pushbutton2 = Bounce(button2, 10);  // 10 ms debounce
-
 ADC *adc = new ADC();
 ADC::Sync_result result;
 
@@ -22,9 +19,10 @@ volatile uint8_t p_zero = 0;
 int8_t pri_switch_on = DISABLE;
 int8_t sec_switch_on = DISABLE;
 
+// exponential average for load voltage
 float alpha = 0.8;
 
-// defined waveforms
+// define waveform
 float sine_wave[wave_points];
 
 
@@ -150,12 +148,9 @@ void initialize() {
         sine_wave[i] = voltage_amplitude * (-cos(2*PI*freq*i*sample_time) + 1) / 2;
     }
 
-    // turn on cycle counter
+    // turn on clock cycle counter
     ARM_DEMCR |= ARM_DEMCR_TRCENA;
     ARM_DWT_CTRL |= ARM_DWT_CTRL_CYCCNTENA;
-
-    pinMode(3, OUTPUT); // trigger for load voltage sense
-
 
 }
 
@@ -182,7 +177,6 @@ void intervalReadInputVoltage() {
 
 //	Obtains load voltage reading
 float loadVoltage() {
-    //return (load_adc[0] + load_adc[1])/ 2.0 / adc_res * aref_voltage * 185;
     result = adc->readSynchronizedContinuous();
     load_voltage = alpha * 0.5*(result.result_adc0 + result.result_adc1) / adc_res * aref_voltage * 190 
         + (1.0-alpha) * load_voltage;
@@ -208,22 +202,6 @@ void timedBuck(float on, float off) {
 
     digitalWriteFast(sec_switch, LOW);
     delayMicroCycles(off);
-}
-
-void comparatorBoost() {
-
-}
-
-void comparatorBuck() {
-
-}
-
-void hybridBoost() {
-
-}
-
-void hybridBuck() {
-
 }
 
 /************************
@@ -286,7 +264,7 @@ void p_curr_zero() {
 void waveform_gen(float* waveform) {
     elapsedMicros loop_timer;
     float error = 0;
-    float error_integral = 0; // goes up to 130000 by itself
+    float error_integral = 0;
     float prop_gain = 0.15;
     float int_gain = 0.06;
     float time = 0;
@@ -324,7 +302,7 @@ void waveform_gen(float* waveform) {
                 }
             }
         }
-        error_integral = 0;
+        error_integral = 0; // clear after each point to prevent integral windup
     }
 }
 
@@ -334,27 +312,9 @@ void waveform_gen(float* waveform) {
 // delays based on number of CPU cycles, disables interrupts
 void delayMicroCycles(float microseconds) {
     unsigned long cycles = ARM_DWT_CYCCNT;
-    unsigned long num_cycles_delay = microseconds * F_CPU * 1e-6 - 5; //5 offset for added instructions
-    /*if (!TIME_MODE) {
-        cli();
-    }*/
+    unsigned long num_cycles_delay = microseconds * F_CPU * 1e-6 - 5; // subtract 5 for these instructions
+
     while(ARM_DWT_CYCCNT < num_cycles_delay + cycles);
-    /*if (!TIME_MODE) {
-        sei();
-    }*/
-}
-
-
-/*******************
-    Math Functions
-********************/
-// takes average of buffer
-float average(float* buffer, int window) {
-    float sum = 0.;
-    for (int i = 0; i < window; i++) {
-        sum += buffer[i];
-    }
-    return sum / window;
 }
 
 /*

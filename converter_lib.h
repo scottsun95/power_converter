@@ -53,7 +53,7 @@ const float adc_res = pow(2, adc_res_bits) - 1;
 // waveform generator constants
 const float top_margin = 1.03;
 const float bot_margin = 0.9;
-const int16_t voltage_amplitude = 200;
+const int16_t voltage_amplitude = 500;
 const float sample_time = 0.00005;
 const uint16_t freq = 10;
 const uint16_t wave_points = 2000;
@@ -67,8 +67,6 @@ float loadVoltage();
 
 void timedBoost(float on, float off);
 void timedBuck(float on, float off);
-void comparatorBoost();
-void comparatorBuck();
 
 void button1Pressed();
 void button2Pressed();
