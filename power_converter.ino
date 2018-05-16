@@ -1,7 +1,5 @@
 #include "converter_lib.h"
 
-elapsedMicros comparator_timer;
-
 void setup() {
     initialize();    
 
