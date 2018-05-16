@@ -58,6 +58,7 @@ void button1Pressed();
 void button2Pressed();
 
 void waveform_gen(float* waveform);
+void timedSquare(unsigned long on_time_milli, unsigned long off_time_milli, float voltage);
 
 void delayMicroCycles(float microseconds);
 
