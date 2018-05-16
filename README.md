@@ -3,6 +3,12 @@
 This driver is based on a bidirectional flyback converter topology that is capable of driving 550V arbitrary waveforms to capacitive devices. It is controlled by Teensy 3.5/3.6 microcontrollers.
 
 
+## Required Software
+Arduino IDE: https://www.arduino.cc/en/Main/Software
+
+Teensyduino Installation: https://www.pjrc.com/teensy/teensyduino.html
+
+
 ## Specifications
 Input Voltage Range: 3.5V-4.5V (with reverse voltage protection)
 
