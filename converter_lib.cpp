@@ -123,7 +123,7 @@ void initialize() {
     }
 
     // square wave
-    duty_cycle = 0.9; // usually stay above 5% and below 95%
+    duty_cycle = 0.5; // usually stay above 5% and below 95%
     for (int i = 0; i < (int) wave_points*(1-duty_cycle)/2; i++) {
         square_wave[i] = 0;
     }

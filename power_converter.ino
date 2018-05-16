@@ -17,7 +17,7 @@ void setup() {
 void loop() {
     if (button1_flag) {
         digitalWriteFast(blue, LOW);
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 25; i++) {
             waveform_gen(square_wave);
         }
         digitalWriteFast(blue, HIGH);
