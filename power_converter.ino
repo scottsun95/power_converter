@@ -3,8 +3,9 @@
 void setup() {
     initialize();    
 
-    delay(1000);
+    delay(500);
 
+    // setup finished indicated by LED turning off
     digitalWriteFast(13, LOW);
     
     // enable gate drive

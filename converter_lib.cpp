@@ -1,5 +1,6 @@
 #include "converter_lib.h"
 
+// ADC objects
 ADC *adc = new ADC();
 ADC::Sync_result result;
 
@@ -11,10 +12,7 @@ float load_voltage = 0;
 volatile uint8_t button1_flag = 0;
 volatile uint8_t button2_flag = 0;
 
-// exponential average for load voltage
-float alpha = 0.8;
-
-// define waveform
+// define waveforms
 float sine_wave[wave_points];
 float saw_wave[wave_points];
 float square_wave[wave_points];
@@ -53,7 +51,7 @@ void initialize() {
     pinMode(pri_switch_disable, OUTPUT);
     digitalWriteFast(pri_switch_disable, HIGH);
 
-    // enable diode
+    // Enable diode
     digitalWriteFast(diode_disable, LOW);
 
     // configure ADC
@@ -70,10 +68,7 @@ void initialize() {
     adc->setAveraging(4, ADC_1);
     adc->setResolution(adc_res_bits, ADC_0);
     adc->setResolution(adc_res_bits, ADC_1);
-
     adc->startSynchronizedContinuous(load_sense, load_sense);
-    //adc->startContinuous(load_sense, ADC_1);
-    //adc->startContinuous(load_sense, ADC_0);
 
     // Turn on load voltage sense
     pinMode(load_sense_disable, OUTPUT); // set to INPUT to turn off
@@ -133,7 +128,6 @@ void initialize() {
     for (int i = (int) (wave_points*(1+duty_cycle)/2); i < wave_points; i++) {
         square_wave[i] = 0;
     }
-
 }
 
 /****************************
@@ -206,30 +200,45 @@ void waveform_gen(float* waveform) {
     float int_gain = 0.06;
     float time = 0;
 
+    // iterates through waveform points
     for (int i = 0; i < wave_points; i++) {
         loop_timer = 0;
 
         while (loop_timer < sample_time * 1e6) {
+            // checks for finished load voltage conversion
             while(!adc->isComplete(ADC_1));
             load_voltage = loadVoltage();
             if (load_voltage > 550) return; // emergency voltage cutoff
-            error = waveform[i] - load_voltage;
 
+            // PI calculation
+            error = waveform[i] - load_voltage;
             error_integral += error;
             time = prop_gain * error + int_gain * error_integral;
+
+            // boost mode
             if (time > 0) {
+                // primary switch on-time ceiling
                 time = time < 5 ? time : 5;
+
+                // switch normally if time long enough, else go to no-delay switching
+                // don't switch if load voltage close enough to setpoint
                 if (time > 0.011) {
-                    timedBoost(time, 0.5*time); 
+                    timedBoost(time, 2*time); 
                 }
                 else if (time < 0.011 && time > 0.006) {
+                    // no delay switching
                     digitalWriteFast(pri_switch, HIGH);
                     digitalWriteFast(pri_switch, LOW); 
                 }
             }
+            // buck mode
             else if (time < 0) {
+                // secondary switch on-time ceiling and scaling
                 time = -0.001*time;
                 time = time < 0.5 ? time : 0.5;
+
+                // switch normally if time long enough, else go to no-delay switching
+                // don't switch if load voltage close enough to setpoint
                 if (time > 0.011) {
                     timedBuck(time, 2*time); 
                 }
@@ -243,50 +252,10 @@ void waveform_gen(float* waveform) {
     }
 }
 
-
-// generates square wave using open loop timing control method. Use waveform_generator() instead
-// except when fine granular control is needed
-void timedSquare(unsigned long on_time_milli, unsigned long off_time_milli, float voltage) {
-    elapsedMillis pulse_timer;
-    float load_voltage = 0;
-    uint8_t level = 0;
-
-    // boost up and hold at voltage
-    pulse_timer = 0;
-    while (pulse_timer < on_time_milli) {
-        if (level == 1) {
-            while (!adc->isComplete(ADC_1));
-            load_voltage = loadVoltage();
-            if (load_voltage < 0.98 * voltage) {
-                timedBoost(4,8);
-            }
-        }
-        else {
-            if (loadVoltage() > 0.90 * voltage) {
-                level = 1;
-            }
-            timedBoost(5,10);
-        }
-    }
-    // buck down and stay at 0
-    pulse_timer = 0;
-    while (pulse_timer < off_time_milli) {
-        while (!adc->isComplete(ADC_1));
-        load_voltage = loadVoltage();
-        Serial.println(load_voltage);
-        if (load_voltage > 400) {
-            timedBuck(0.1,0.5); 
-        }
-        else if (load_voltage > 1) {
-            timedBuck(0.3,0.5); 
-        }
-    }
-}
-
 /*********************
     Timing Functions
 **********************/
-// delays based on number of CPU cycles, disables interrupts
+// delays based on number of CPU cycles
 void delayMicroCycles(float microseconds) {
     unsigned long cycles = ARM_DWT_CYCCNT;
     unsigned long num_cycles_delay = microseconds * F_CPU * 1e-6 - 5; // subtract 5 for these instructions

@@ -36,16 +36,18 @@ const uint8_t adc_res_bits = 12;
 const float adc_res = pow(2, adc_res_bits) - 1;
 const float input_gain = 1.95;
 const float load_gain = 190;
+const float alpha = 0.8;
 
 // waveform generator constants
-const int16_t voltage_amplitude = 400;
-const float sample_time = 0.0001;		// sample_time * freq * wave_points = 1
-const uint16_t freq = 10;
-const uint16_t wave_points = 1000;
+const int16_t voltage_amplitude = 400;	// waveform max amplitude
+const float sample_time = 0.0001;		// period: sample_time * freq * wave_points = 1
+const uint16_t freq = 10;				// waveform freq
+const uint16_t wave_points = 1000;		// number of points 
 extern float sine_wave[wave_points];
 extern float saw_wave[wave_points];
 extern float square_wave[wave_points];
 
+// function prototypes
 void initialize();
 
 float inputVoltage();
@@ -62,6 +64,7 @@ void timedSquare(unsigned long on_time_milli, unsigned long off_time_milli, floa
 
 void delayMicroCycles(float microseconds);
 
+// interrupt flags
 extern volatile uint8_t button1_flag;
 extern volatile uint8_t button2_flag;
 
