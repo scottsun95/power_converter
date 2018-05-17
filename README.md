@@ -18,6 +18,8 @@ Output Capacitance: 1nF-50nF (a broader range can work, but only these values we
 
 Note: Ensure trace between VUSB and VIN on Teensy is cut in order to allow the USB to be simultaneously plugged in with the input power. Failing to do so may destroy the Teensy. More details here: https://www.pjrc.com/teensy/external_power.html.
 
+## Board Image
+![](board_im.jpeg?raw=true)
 
 ## Driver Code
 Refer only to the code contained in the `master` branch.
